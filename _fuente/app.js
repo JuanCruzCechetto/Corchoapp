@@ -83,7 +83,7 @@ const canNotify=()=>"Notification" in window;
 function notify(title,body,tag){
  toast(title+(body?". "+body:""));beep();
  if(!D.cfg.notif||!canNotify()||Notification.permission!=="granted")return;
- const opts={body:body||"",icon:"icon-192.png",badge:"icon-192.png",tag:tag||uid()};
+ const opts={body:body||"",icon:"icon-192-jc3.png",badge:"icon-192-jc3.png",tag:tag||uid()};
  const plain=()=>{try{new Notification(title,opts)}catch(e){}};
  try{if(navigator.serviceWorker&&navigator.serviceWorker.controller)navigator.serviceWorker.ready.then(r=>r.showNotification(title,opts)).catch(plain);else plain()}catch(e){plain()}
 }
