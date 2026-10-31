@@ -801,16 +801,87 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
 .pg-grid .pg-main{grid-area:main}.pg-grid .pg-tj{grid-area:tj}.pg-grid .pg-cal{grid-area:cal}.pg-grid .pg-may{grid-area:may}
 @media (max-width:900px){.pg-grid{grid-template-areas:"main" "cal" "tj" "may"}}
 
+/* Sincronización */
+.sync-ic{display:grid;place-items:center;width:40px;height:40px;border:0;background:none;border-radius:10px;cursor:pointer;color:#55555E;position:relative;flex:none}
+.sync-ic svg{width:22px;height:22px}
+.sync-ic:hover{background:var(--rule-2)}
+.sync-ic[data-st="ok"]{color:var(--ink)}
+.sync-ic[data-st="sincronizando"],.sync-ic[data-st="conectando"],.sync-ic[data-st="cargando"]{color:var(--ink-2)}
+.sync-ic[data-st="error"]{color:var(--crit)}
+.sync-ic[data-st="sin-config"]{display:none}
+.sync-ic::after{content:"";position:absolute;right:7px;bottom:9px;width:7px;height:7px;border-radius:50%;background:transparent}
+.sync-ic[data-st="ok"]::after{background:var(--ok)}
+.sync-ic[data-st="desconectado"]::after,.sync-ic[data-st="sin-conexion"]::after{background:var(--warn)}
+.sync-ic[data-st="error"]::after{background:var(--crit)}
+@media (prefers-reduced-motion:no-preference){.sync-ic[data-st="sincronizando"] svg{animation:syncPulse 1.2s ease-in-out infinite}@keyframes syncPulse{50%{opacity:.35}}}
+.side .sync-ic{margin:8px auto 0}
+.sync-row{display:flex;align-items:center;gap:8px}
+.sync-dot{width:9px;height:9px;border-radius:50%;background:var(--ink-2)}
+.sync-dot[data-st="ok"]{background:var(--ok)} .sync-dot[data-st="error"]{background:var(--crit)} .sync-dot[data-st="desconectado"],.sync-dot[data-st="sin-conexion"]{background:var(--warn)}
+.sync-banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;border:1px solid var(--rule);background:var(--sheet);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.sync-banner>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.btn svg[width]{width:16px;height:16px}
+.form>.btn{justify-content:center}
+
+/* Anillo por categoría */
+.don-card{position:relative;padding-bottom:22px}
+.don-head{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:12px}
+.don-head b{font-size:17px;font-weight:600;letter-spacing:-.01em;text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:1px}
+.don-seg{max-width:260px;margin:0 auto 14px}
+.don-seg button{flex:1}
+.don-wrap{position:relative;display:flex;justify-content:center;max-width:300px;margin:0 auto 16px}
+.don-slot{display:flex;justify-content:center}
+.ring-don{display:block}
+.ring-don .seg{cursor:pointer;transition:opacity .2s}
+.ring-don .seg.dim{opacity:.32}
+.don-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:0 22%}
+.don-center b{font-size:clamp(24px,8vw,34px);font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.dc-cat{font-size:12.5px;color:var(--ink-2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-pct{font-size:13px;color:var(--ink-2)}
+.don-legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.don-legend button{width:100%;display:grid;grid-template-columns:12px minmax(0,1fr) auto 42px;align-items:center;gap:10px;border:0;background:none;padding:8px 6px;border-radius:8px;cursor:pointer;text-align:left;font-size:13.5px}
+.don-legend button:hover,.don-legend button.on{background:var(--rule-2)}
+.don-legend i{width:12px;height:12px;border-radius:3px}
+.don-legend span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.don-legend b{font-weight:500}
+.don-legend em{font-style:normal;color:var(--ink-2);text-align:right;font-size:12.5px}
+.don-fab{position:absolute;right:16px;top:14px;width:46px;height:46px;border-radius:50%;border:0;background:#F2C14E;color:#000;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.don-fab svg{width:22px;height:22px}
+.don-fab:hover{background:#F6CF6E}
+.don-fab{top:auto;right:-6px;bottom:-4px;width:52px;height:52px}
+.don-center b{font-family:var(--f-body);font-weight:400}
+.don-center b.num{font-variant-numeric:tabular-nums}
+
+/* Categorías y límites */
+.don-tools{display:flex;justify-content:center;margin:-4px 0 12px}
+.don-tools .linkbtn{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-size:13px}
+.don-tools svg{width:15px;height:15px}
+#v-finanzas .cat[data-act]{cursor:pointer;border-radius:8px;margin:0 -8px;padding-left:8px;padding-right:8px}
+#v-finanzas .cat[data-act]:hover{background:var(--rule-2)}
+.cm-sum{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--ink-2);padding:10px 12px;border:1px solid var(--rule);border-radius:10px;margin-bottom:10px}
+.cm-sum b{color:var(--ink);font-weight:600;margin-left:4px}
+.cm-sum b.pos{color:var(--ok)} .cm-sum b.neg{color:var(--crit)}
+.cm-list{list-style:none;margin:0 0 6px;padding:0;display:flex;flex-direction:column}
+.cm-list button{width:100%;display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:12px;border:0;border-bottom:1px solid var(--rule-2);background:none;padding:11px 4px;cursor:pointer;text-align:left}
+.cm-list li:last-child button{border-bottom:0}
+.cm-list button:hover{background:var(--rule-2)}
+.cm-list i{width:12px;height:12px;border-radius:3px}
+.cm-n{display:flex;flex-direction:column;gap:5px;min-width:0;font-weight:500}
+.cm-bar{display:block;height:4px;border-radius:2px;background:var(--rule);overflow:hidden;max-width:220px}
+.cm-bar em{display:block;height:100%}
+.cm-l{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+
 </style>
 </head>
 <body>
 <div id="splash" role="status" aria-label="Cargando Corcho"><svg class="sp-logo" viewBox="136 76 240 356" aria-hidden="true"><g fill="none" stroke="#E2B84A" stroke-linecap="round" stroke-linejoin="round"><path d="M154 152C154 114 174 98 212 96Q256 88 300 96C338 98 358 114 358 152L358 234C358 258 344 270 320 272L192 272C168 270 154 258 154 234Z" stroke-width="12"/><path d="M200 128C232 118 280 118 312 128" stroke-width="5" opacity=".75"/><path d="M190 276L185 392C184 408 192 414 206 414L306 414C320 414 328 408 327 392L322 276" stroke-width="12"/><path d="M188 348C226 356 286 356 324 348" stroke-width="5" opacity=".75"/><path d="M226 372V394M286 368V386" stroke-width="4" opacity=".5"/></g></svg><svg class="sp-spin" viewBox="0 0 50 50" aria-hidden="true"><circle class="tr" cx="25" cy="25" r="20"/><circle cx="25" cy="25" r="20"/></svg></div>
-<header class="topbar"><button class="menubtn" data-act="menu" aria-label="Abrir menú" aria-controls="sideMenu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h11"/></svg><span class="badge" data-badge="menu" hidden></span></button><div class="brand"><svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#15171B"/><g fill="none" stroke="#E2B84A" stroke-linecap="round" stroke-linejoin="round"><path d="M154 152C154 114 174 98 212 96Q256 88 300 96C338 98 358 114 358 152L358 234C358 258 344 270 320 272L192 272C168 270 154 258 154 234Z" stroke-width="22"/><path d="M190 276L185 392C184 408 192 414 206 414L306 414C320 414 328 408 327 392L322 276" stroke-width="22"/></g></svg><b>Corcho</b></div></header>
+<header class="topbar"><button class="menubtn" data-act="menu" aria-label="Abrir menú" aria-controls="sideMenu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h11"/></svg><span class="badge" data-badge="menu" hidden></span></button><div class="brand"><svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#15171B"/><g fill="none" stroke="#E2B84A" stroke-linecap="round" stroke-linejoin="round"><path d="M154 152C154 114 174 98 212 96Q256 88 300 96C338 98 358 114 358 152L358 234C358 258 344 270 320 272L192 272C168 270 154 258 154 234Z" stroke-width="22"/><path d="M190 276L185 392C184 408 192 414 206 414L306 414C320 414 328 408 327 392L322 276" stroke-width="22"/></g></svg><b>Corcho</b></div><span class="grow"></span><button class="sync-ic" data-go="ajustes" aria-label="Sincronización"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18.5h10.5a4 4 0 0 0 .6-8 6 6 0 0 0-11.6-1.4A4.5 4.5 0 0 0 7 18.5z"/></svg></button></header>
 <div class="scrim" data-act="menuClose"></div>
 <div class="app">
   <aside class="side" id="sideMenu" aria-label="Secciones">
     <div class="brand"><svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#15171B"/><g fill="none" stroke="#E2B84A" stroke-linecap="round" stroke-linejoin="round"><path d="M154 152C154 114 174 98 212 96Q256 88 300 96C338 98 358 114 358 152L358 234C358 258 344 270 320 272L192 272C168 270 154 258 154 234Z" stroke-width="22"/><path d="M190 276L185 392C184 408 192 414 206 414L306 414C320 414 328 408 327 392L322 276" stroke-width="22"/></g></svg><b>Corcho</b><button class="x side-close" data-act="menuClose" aria-label="Cerrar menú">×</button></div>
     <nav id="sideNav"></nav>
+    <span class="grow"></span><button class="sync-ic" data-go="ajustes" aria-label="Sincronización"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18.5h10.5a4 4 0 0 0 .6-8 6 6 0 0 0-11.6-1.4A4.5 4.5 0 0 0 7 18.5z"/></svg></button>
   </aside>
   <main class="main">
     <div class="wrap">
@@ -921,6 +992,76 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
+<script src="firebase-config.js"></script>
+<script>
+/* Corcho · sincronización con Firebase (Google + Firestore).
+   Cada clave "corcho:*" de este dispositivo se guarda como un documento en users/{uid}/data/{clave}.
+   Gana la versión más nueva de cada clave. Sin configuración, la app funciona solo en el dispositivo. */
+(function(){
+"use strict";
+const META_K="corcho-sync-meta",SDK="https://www.gstatic.com/firebasejs/10.12.2/";
+const cfg=window.CORCHO_FIREBASE&&window.CORCHO_FIREBASE.apiKey?window.CORCHO_FIREBASE:null;
+let meta;try{meta=JSON.parse(localStorage.getItem(META_K)||"{}")}catch(e){meta={}}
+meta.ts=meta.ts||{};meta.dirty=meta.dirty||{};
+const saveMeta=()=>{try{localStorage.setItem(META_K,JSON.stringify(meta))}catch(e){}};
+const listeners=new Set();
+const S={available:!!cfg,ready:false,user:null,state:cfg?"cargando":"sin-config",lastSync:meta.last||null,error:null,
+ onChange(fn){listeners.add(fn);return()=>listeners.delete(fn)},
+ touch(k){if(!k||k.indexOf("corcho:")!==0)return;meta.ts[k]=Date.now();meta.dirty[k]=1;saveMeta();schedule()},
+ signIn,signOut,syncNow,wipeRemote,chooseFirst:null};
+window.CorchoSync=S;
+const emit=()=>listeners.forEach(fn=>{try{fn(S)}catch(e){}});
+if(!cfg)return;
+function loadScript(src){return new Promise((ok,ko)=>{const s=document.createElement("script");s.src=src;s.async=true;s.onload=ok;s.onerror=()=>ko(new Error("No se pudo cargar "+src));document.head.appendChild(s)})}
+let fb=null,db=null,auth=null,col=null,unsub=null,flushT=null,flushing=false;
+const localKeys=()=>{const o=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf("corcho:")===0)o.push(k)}}catch(e){}return o};
+const enc=k=>encodeURIComponent(k),dec=id=>decodeURIComponent(id);
+function setState(st,err){S.state=st;S.error=err||null;emit()}
+loadScript(SDK+"firebase-app-compat.js").then(()=>Promise.all([loadScript(SDK+"firebase-auth-compat.js"),loadScript(SDK+"firebase-firestore-compat.js")])).then(()=>{
+ fb=window.firebase;fb.initializeApp(cfg);auth=fb.auth();db=fb.firestore();
+ auth.getRedirectResult().catch(e=>setState("error",authMsg(e)));
+ auth.onAuthStateChanged(u=>{S.user=u?{uid:u.uid,email:u.email,name:u.displayName}:null;S.ready=true;if(unsub){unsub();unsub=null}
+  if(u){col=db.collection("users").doc(u.uid).collection("data");firstSync().catch(e=>setState("error","No se pudo sincronizar: "+(e&&e.message||e)))}else{col=null;setState("desconectado")}});
+}).catch(()=>{S.ready=true;setState("sin-conexion","Sin conexión: tus cambios se guardan en este dispositivo y se sincronizan cuando vuelvas a tener internet.")});
+function authMsg(e){const c=e&&e.code||"";if(c.includes("unauthorized-domain"))return "Este dominio no está autorizado en Firebase. Agregalo en Authentication › Configuración › Dominios autorizados.";if(c.includes("popup-closed"))return "Cerraste la ventana de Google antes de terminar.";if(c.includes("network"))return "No hay conexión a internet.";return "No se pudo iniciar sesión ("+(c||e&&e.message||"error")+")."}
+function signIn(){if(!auth)return;const p=new fb.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});setState("conectando");
+ auth.signInWithPopup(p).catch(e=>{const c=e&&e.code||"";if(c.includes("popup-blocked")||c.includes("operation-not-supported")||c.includes("web-storage-unsupported"))return auth.signInWithRedirect(p);setState(S.user?"ok":"desconectado",authMsg(e))})}
+function signOut(){if(!auth)return;auth.signOut()}
+const hasLocalData=()=>localKeys().some(k=>{const v=localStorage.getItem(k);return v&&v!=="[]"&&v!=="{}"&&v!=="null"});
+async function firstSync(){
+ setState("sincronizando");
+ const snap=await col.get();const remote={};snap.forEach(d=>{remote[dec(d.id)]=d.data()});
+ const firstTime=meta.uid!==S.user.uid;
+ if(firstTime&&Object.keys(remote).length&&hasLocalData()){
+  const choice=await new Promise(res=>{S.chooseFirst=res;emit()});S.chooseFirst=null;
+  if(choice==="nube"){localKeys().forEach(k=>{if(!(k in remote)){try{localStorage.removeItem(k)}catch(e){}}});meta.ts={};meta.dirty={}}
+  else{const now=Date.now();localKeys().forEach(k=>{meta.ts[k]=now;meta.dirty[k]=1});Object.keys(remote).forEach(k=>{if(localStorage.getItem(k)==null){meta.dirty[k]=1;meta.ts[k]=now;remote[k]=null}})}
+ }
+ let changed=false;
+ for(const [k,r] of Object.entries(remote)){if(!r)continue;const lt=meta.ts[k]||0;
+  if(r.del){if(r.ts>lt&&localStorage.getItem(k)!=null){localStorage.removeItem(k);changed=true}meta.ts[k]=Math.max(lt,r.ts);continue}
+  if(r.ts>lt||(firstTime&&!meta.dirty[k])){if(localStorage.getItem(k)!==r.v){localStorage.setItem(k,r.v);changed=true}meta.ts[k]=r.ts;delete meta.dirty[k]}
+  else if(lt>r.ts)meta.dirty[k]=1}
+ localKeys().forEach(k=>{if(!(k in remote)){meta.dirty[k]=1;meta.ts[k]=meta.ts[k]||Date.now()}});
+ meta.uid=S.user.uid;saveMeta();
+ await flush();
+ if(changed&&window.CorchoApp&&window.CorchoApp.reloadData)window.CorchoApp.reloadData();
+ listen();
+}
+function listen(){if(!col)return;unsub=col.onSnapshot(snap=>{let changed=false;snap.docChanges().forEach(ch=>{if(ch.doc.metadata.hasPendingWrites)return;const k=dec(ch.doc.id),r=ch.doc.data();if(!r)return;const lt=meta.ts[k]||0;if(r.ts<=lt||meta.dirty[k])return;
+  if(r.del){try{localStorage.removeItem(k)}catch(e){}}else{try{localStorage.setItem(k,r.v)}catch(e){}}meta.ts[k]=r.ts;changed=true});
+  if(changed){saveMeta();S.lastSync=meta.last=Date.now();saveMeta();if(window.CorchoApp&&window.CorchoApp.reloadData)window.CorchoApp.reloadData();emit()}},e=>setState("error","Se cortó la sincronización: "+(e&&e.message||e)))}
+function schedule(){if(!col)return;clearTimeout(flushT);flushT=setTimeout(()=>flush().catch(()=>{}),900)}
+async function flush(){if(!col||flushing)return;flushing=true;try{const keys=Object.keys(meta.dirty);if(keys.length)setState("sincronizando");
+ for(let i=0;i<keys.length;i+=400){const b=db.batch();keys.slice(i,i+400).forEach(k=>{const v=localStorage.getItem(k);const ref=col.doc(enc(k));if(v==null)b.set(ref,{del:true,ts:meta.ts[k]||Date.now()});else b.set(ref,{v,ts:meta.ts[k]||Date.now()})});await b.commit();keys.slice(i,i+400).forEach(k=>delete meta.dirty[k])}
+ S.lastSync=meta.last=Date.now();saveMeta();setState("ok")}catch(e){setState("error",navigator.onLine===false?"Sin conexión: se sincroniza cuando vuelva internet.":"No se pudo guardar en la nube: "+(e&&e.message||e))}finally{flushing=false;if(Object.keys(meta.dirty).length&&S.state==="ok")schedule()}}
+function syncNow(){if(!col)return Promise.resolve();return flush()}
+async function wipeRemote(){if(!col)return;const snap=await col.get();const now=Date.now();const b=db.batch();snap.forEach(d=>b.set(d.ref,{del:true,ts:now}));await b.commit();meta.ts={};meta.dirty={};saveMeta()}
+window.addEventListener("online",()=>schedule());
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&col&&Object.keys(meta.dirty).length)flush().catch(()=>{})});
+})();
+
+</script>
 <script>
 try{var ks=Object.keys(localStorage);if(!localStorage.getItem("corcho:fin:config")&&!ks.some(function(k){return k.indexOf("corcho:fin:mes:")===0})){ks.forEach(function(k){if(k==="ldc:config")localStorage.setItem("corcho:fin:config",localStorage.getItem(k));else if(k.indexOf("ldc:mes:")===0)localStorage.setItem("corcho:fin:mes:"+k.slice(8),localStorage.getItem(k))})}}catch(e){}
 </script>
@@ -980,7 +1121,7 @@ const S={cfg:clone(DEFAULT_CONFIG),cfgSaved:false,key:monthKey(new Date()),month
 /* ---------- almacenamiento ---------- */
 const mem={};
 function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return mem[k]?clone(mem[k]):null}}
-function lsSet(k,v){mem[k]=clone(v);try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function lsSet(k,v){mem[k]=clone(v);try{localStorage.setItem(k,JSON.stringify(v));window.CorchoSync&&window.CorchoSync.touch(k)}catch(e){}}
 const queues={};
 function enqueue(path,fn){
   const run=()=>fn().catch(e=>{
@@ -1242,7 +1383,7 @@ function renderCats(r){
     }else{
       note='<span class="pill none">Sin límite</span>';
     }
-    return '<div class="cat"><div class="cat-name">'+esc(b.c.nombre)+(b.n?'<span class="n">'+b.n+" mov.</span>":"")+'</div><div class="cat-fig num">'+fmt(b.total)+(lim&&!b.c.ahorro?" <span>/ "+fmt(lim)+"</span>":"")+"</div>"+bar+'<div class="cat-note">'+note+"</div></div>";
+    return '<div class="cat" data-act="catEdit" data-id="'+esc(b.c.id)+'" role="button" tabindex="0" aria-label="Editar '+esc(b.c.nombre)+'"><div class="cat-name">'+esc(b.c.nombre)+(b.n?'<span class="n">'+b.n+" mov.</span>":"")+'</div><div class="cat-fig num">'+fmt(b.total)+(lim&&!b.c.ahorro?" <span>/ "+fmt(lim)+"</span>":"")+"</div>"+bar+'<div class="cat-note">'+note+"</div></div>";
   }).join("");
 }
 function renderAlerts(r){
@@ -1512,7 +1653,7 @@ Store.connect().then(ok=>{
   S.mode="db";
   watchConfig();watchMonth();loadPrev(S.key);renderAll();
 });
-window.CorchoFin={fmt,cfg(){return S.cfg},classify,getMonth(k){return Store.getMonth(k)},data(){const r=calc();return {key:S.key,label:keyLabel(S.key),items:S.month.items||[],sa:saldoAnt(),cfg:S.cfg,disp:r.disp,gas:r.gas,ing:r.ing,alertas:alerts(r).length}},async addItems(arr){const g={};arr.forEach(p=>{const k=p.fecha.slice(0,7);(g[k]=g[k]||[]).push(p)});for(const k of Object.keys(g)){if(k===S.key){S.month.items=(S.month.items||[]).concat(g[k]);await saveMonth()}else{const d=(await Store.getMonth(k))||{saldoAnterior:null,items:[]};d.items=(d.items||[]).concat(g[k]);await Store.saveMonth(k,d)}}renderAll()},summary(){const r=calc();const A=alerts(r);return {disp:r.disp,ing:r.ing,gas:r.gas,mes:keyLabel(S.key),alertas:A.length,crit:A.filter(a=>a.k==="crit").length,top:A[0]?A[0].t:"",fmt}},refresh(){renderAll()}};
+window.CorchoFin={fmt,saveCfg(c){S.cfg=c;S.cfgSaved=true;S.dirty=false;Store.saveConfig(S.cfg);renderAll();if(S.tab==="ajustes")renderSettings()},reload(){watchConfig();watchMonth();loadPrev(S.key)},cfg(){return S.cfg},classify,getMonth(k){return Store.getMonth(k)},data(){const r=calc();return {key:S.key,label:keyLabel(S.key),items:S.month.items||[],sa:saldoAnt(),cfg:S.cfg,disp:r.disp,gas:r.gas,ing:r.ing,alertas:alerts(r).length}},async addItems(arr){const g={};arr.forEach(p=>{const k=p.fecha.slice(0,7);(g[k]=g[k]||[]).push(p)});for(const k of Object.keys(g)){if(k===S.key){S.month.items=(S.month.items||[]).concat(g[k]);await saveMonth()}else{const d=(await Store.getMonth(k))||{saldoAnterior:null,items:[]};d.items=(d.items||[]).concat(g[k]);await Store.saveMonth(k,d)}}renderAll()},summary(){const r=calc();const A=alerts(r);return {disp:r.disp,ing:r.ing,gas:r.gas,mes:keyLabel(S.key),alertas:A.length,crit:A.filter(a=>a.k==="crit").length,top:A[0]?A[0].t:"",fmt}},refresh(){renderAll()}};
 })();
 
 </script>
@@ -1529,7 +1670,7 @@ const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 const mem={};
 function load(k,def){try{const v=localStorage.getItem("corcho:"+k);if(v)return JSON.parse(v)}catch(e){if(mem[k])return clone(mem[k])}return clone(def)}
 let saveWarned=false;
-function save(k,v){mem[k]=clone(v);try{localStorage.setItem("corcho:"+k,JSON.stringify(v))}catch(e){if(!saveWarned){saveWarned=true;toast("Este navegador no permite guardar datos. Lo que cargues se pierde al cerrar.")}}}
+function save(k,v){mem[k]=clone(v);try{localStorage.setItem("corcho:"+k,JSON.stringify(v));window.CorchoSync&&window.CorchoSync.touch("corcho:"+k)}catch(e){if(!saveWarned){saveWarned=true;toast("Este navegador no permite guardar datos. Lo que cargues se pierde al cerrar.")}}}
 
 const pad2=n=>String(n).padStart(2,"0");
 const isoOf=d=>d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
@@ -2034,8 +2175,9 @@ function renderMas(){
 function applyTheme(){document.documentElement.removeAttribute("data-theme");const m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content","#000000")}
 function renderAjustes(){
  const c=D.cfg;
- let h=vhead("Ajustes","Corcho App guarda todo en este dispositivo");
+ const SY=window.CorchoSync;let h=vhead("Ajustes",SY&&SY.user?"Tus datos se sincronizan con tu cuenta de Google":"Corcho App guarda todo en este dispositivo");
  h+='<div class="board">';
+ h+=syncCard();
  h+=card("ajustes","Perfil","",'<div class="field"><label for="a-nombre">Tu nombre</label><input id="a-nombre" data-cfg="nombre" value="'+esc(c.nombre)+'" placeholder="Para el saludo de Hoy" maxlength="40"></div>');
  h+=card("ajustes","Metas semanales","",'<div class="frow"><div class="field"><label for="a-me">Entrenos por semana</label><input type="number" id="a-me" data-cfg="metaEntrenos" data-n="1" min="1" max="14" value="'+c.metaEntrenos+'"></div><div class="field"><label for="a-ms">Horas de estudio</label><input type="number" id="a-ms" data-cfg="metaEstudio" data-n="1" min="0" max="80" value="'+c.metaEstudio+'"></div></div>');
  h+=notifCard();
@@ -2051,8 +2193,8 @@ function exportAll(){
 }
 function importAll(file){
  const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!d.datos)throw 0;let n=0;
-  Object.keys(d.datos).forEach(k=>{let key=null;if(k.indexOf("corcho:")===0)key=k;else if(k==="ldc:config")key="corcho:fin:config";else if(k.indexOf("ldc:mes:")===0)key="corcho:fin:mes:"+k.slice(8);if(key){localStorage.setItem(key,JSON.stringify(d.datos[k]));n++}});
-  if(!n)throw 0;toast("Copia restaurada. Recargando…");setTimeout(()=>location.reload(),900)}catch(e){toast("Ese archivo no es una copia válida de Corcho App.")}};r.readAsText(file);
+  Object.keys(d.datos).forEach(k=>{let key=null;if(k.indexOf("corcho:")===0)key=k;else if(k==="ldc:config")key="corcho:fin:config";else if(k.indexOf("ldc:mes:")===0)key="corcho:fin:mes:"+k.slice(8);if(key){localStorage.setItem(key,JSON.stringify(d.datos[k]));window.CorchoSync&&window.CorchoSync.touch(key);n++}});
+  if(!n)throw 0;toast("Copia restaurada. Recargando…");const go2=()=>setTimeout(()=>location.reload(),600);(window.CorchoSync&&window.CorchoSync.user?window.CorchoSync.syncNow():Promise.resolve()).then(go2,go2)}catch(e){toast("Ese archivo no es una copia válida de Corcho App.")}};r.readAsText(file);
 }
 
 /* ================= componentes compartidos (rediseño) ================= */
@@ -2095,6 +2237,8 @@ function renderHoy(){
  const rs=D.rec.filter(r=>!r.hecho&&r.at.slice(0,10)<=t).sort((a,b)=>a.at.localeCompare(b.at));
  const pp=pendientes().filter(p=>p.fecha<=addDays(t,30));
  let h='<section class="hero"><div class="hero-date"><b>'+d.getDate()+"</b><span>"+cap(DIAS[d.getDay()])+"<small>"+cap(MC[d.getMonth()])+" "+d.getFullYear()+'</small></span></div><div class="hero-msg"><h1>'+greet()+(D.cfg.nombre?", "+esc(D.cfg.nombre):"")+"</h1><p>"+FRASES[doy%FRASES.length]+"</p></div></section>";
+ const SY=window.CorchoSync;let later=null;try{later=localStorage.getItem("corcho-sync-later")}catch(e){}
+ if(SY&&SY.available&&SY.ready&&!SY.user&&SY.state!=="sin-conexion"&&later!==t)h+='<div class="sync-banner"><div><b>Sincronizá tus datos</b><span class="small muted">Iniciá sesión con Google para ver lo mismo en el teléfono y en la computadora.</span></div><div class="vact"><button class="btn" data-act="syncLater">Ahora no</button><button class="btn primary" data-act="syncIn">'+GOOGLE_G+' Iniciar sesión</button></div></div>';
  h+='<div class="dash">';
  // tareas
  const tl=pend.slice(0,5).concat(doneT.slice(0,Math.max(0,5-pend.length)));
@@ -2316,7 +2460,7 @@ function renderFinDash(){
  const byC={};(d.items||[]).forEach(it=>{if(it.tipo==="ingreso"||isAh(it))return;byC[it.cat]=(byC[it.cat]||0)+it.monto});let parts=Object.entries(byC).map(([id,v])=>({label:nameIn(d.cfg.categorias,id)||"Otros",v})).sort((a,b)=>b.v-a.v);if(parts.length>5){const rest=parts.slice(5).reduce((s,p)=>s+p.v,0);parts=parts.slice(0,5).concat([{label:"Resto",v:rest}])}
  const gt=parts.reduce((s,p)=>s+p.v,0);
  h+='<div class="fd-grid"><article class="card fd-bal"><header class="card-head"><h2>Balance del período</h2><span class="legend"><i class="lg-cur"></i>Este mes <i class="lg-prev"></i>Mes anterior</span></header><div class="fd-figs"><span>Neto <b class="num '+(net<0?"neg":"")+'">'+money(net)+'</b></span><span>Ingresos <b class="num pos">'+money(ing)+'</b></span><span>Gastos <b class="num">'+money(gas+aho)+'</b></span><span>Mes anterior <b class="num">'+(pItems?money(pN):"…")+"</b></span></div>"+chartSlot(w=>periodSvg(cur,prev,n,w,240),240)+"</article>";
- h+='<article class="card fd-cat"><header class="card-head"><h2>Gasto por categoría</h2></header>'+(gt?'<div class="donut">'+donutSvg(parts,gt,180)+'<div class="donut-c"><b class="num">'+money(gt)+'</b><span class="small muted">Total</span></div></div><ul class="dlegend">'+parts.map((p,i)=>'<li><i style="background:'+GREYS[i%GREYS.length]+'"></i><span>'+esc(p.label)+'</span><b class="num">'+Math.round(p.v/gt*100)+"%</b></li>").join("")+"</ul>":'<p class="empty">Todavía no hay gastos este mes.</p>')+"</article></div>";
+ h+=donutCard(d);
  // últimos movimientos
  const lastM=(d.items||[]).slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,6);
  h+='<article class="card fd-movs"><header class="card-head"><h2>Últimos movimientos</h2><button class="linkbtn" data-act="finMovs">Ver todos →</button></header>'+(lastM.length?'<div class="tablewrap ptw"><table class="ptable"><thead><tr><th>Tipo</th><th>Descripción</th><th>Cuenta</th><th>Categoría</th><th>Fecha</th><th class="r">Monto</th></tr></thead><tbody>'+lastM.map(it=>{const inn=it.tipo==="ingreso";return "<tr><td>"+(inn?IC_IN:IC_OUT)+"</td><td><b>"+esc(it.concepto)+"</b></td><td>"+esc(nameIn(d.cfg.cuentas,it.cuenta)||"—")+"</td><td>"+esc(inn?"Ingreso":nameIn(d.cfg.categorias,it.cat)||"—")+'</td><td class="num">'+parseISO(it.fecha).getDate()+" "+MC[parseISO(it.fecha).getMonth()]+'</td><td class="r num '+(inn?"pos":"neg")+'">'+(inn?"+ ":"− ")+money(it.monto)+"</td></tr>"}).join("")+"</tbody></table></div>":'<p class="empty">Pegá tus movimientos en "Cargar movimientos" para empezar.</p>')+"</article>";
@@ -2324,6 +2468,79 @@ function renderFinDash(){
 }
 window.CorchoFinHook=()=>{try{renderFinDash()}catch(e){}};
 window.CorchoPagosRender=()=>{try{renderPagos()}catch(e){}};
+
+
+/* ================= FINANZAS: anillo por categoría ================= */
+let donTipo="gasto",donSel=null;
+const DON_COLORS=["#D65A8C","#4A7BD0","#5BC24A","#E0473A","#7FB257","#2F56A6","#8A2BC2","#D9822B","#3B8FF6","#E83E9C","#26B5A8","#F2C14E","#9B6BDB","#C0392B"];
+function catColor(list,id){const i=(list||[]).findIndex(c=>c.id===id);if(i>=0&&list[i].color)return list[i].color;if(i<0){let h=0;String(id).split("").forEach(ch=>h=(h*31+ch.charCodeAt(0))>>>0);return DON_COLORS[h%DON_COLORS.length]}return DON_COLORS[i%DON_COLORS.length]}
+function shortMoney(v){const a=Math.abs(v),sg=v<0?"−":"";if(a>=1e6)return sg+(a/1e6).toFixed(2).replace(".",",")+" M$";if(a>=1e4)return sg+Math.round(a/1e3)+" k$";return sg+Math.round(a).toLocaleString("es-AR")+" $"}
+function donutParts(d,tipo){
+ const isAh=it=>{const c=d.cfg.categorias.find(c=>c.id===it.cat);return c&&c.ahorro};
+ const by={};(d.items||[]).forEach(it=>{const inn=it.tipo==="ingreso";if(tipo==="ingreso"?!inn:inn)return;const k=it.cat||"otros";by[k]=(by[k]||0)+(+it.monto||0)});
+ const list=tipo==="ingreso"?(d.cfg.ingresos||[]):d.cfg.categorias;
+ return Object.entries(by).filter(([,v])=>v>0).map(([id,v])=>({id,v,label:nameIn(list,id)||(tipo==="ingreso"?"Otros ingresos":"Otros"),color:catColor(list,id),ahorro:tipo==="gasto"&&!!(d.cfg.categorias.find(c=>c.id===id)||{}).ahorro})).sort((a,b)=>b.v-a.v);
+}
+function ringSvg(parts,total,S,sel){
+ const cx=S/2,cy=S/2,r1=S/2-4,r0=r1*.66,gap=Math.max(3,S*.012);
+ const P=(r,a)=>(cx+r*Math.sin(a)).toFixed(2)+" "+(cy-r*Math.cos(a)).toFixed(2);
+ let s='<svg class="ring-don" width="'+S+'" height="'+S+'" viewBox="0 0 '+S+" "+S+'" role="img" aria-label="Distribución por categoría">';
+ if(!parts.length||!total)s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+((r0+r1)/2).toFixed(1)+'" fill="none" stroke="#1C1C20" stroke-width="'+(r1-r0).toFixed(1)+'"/>';
+ else if(parts.length===1)s+='<path class="seg on" d="M'+P(r1,0)+"A"+r1+" "+r1+" 0 1 1 "+P(r1,Math.PI)+"A"+r1+" "+r1+" 0 1 1 "+P(r1,2*Math.PI-1e-4)+"L"+P(r0,2*Math.PI-1e-4)+"A"+r0+" "+r0+" 0 1 0 "+P(r0,Math.PI)+"A"+r0+" "+r0+" 0 1 0 "+P(r0,0)+'Z" fill="'+parts[0].color+'" data-act="donSel" data-i="0"/>';
+ else{let a=0;parts.forEach((p,i)=>{const sw=2*Math.PI*p.v/total;const a0=a,a1=a+sw;a=a1;const go=Math.min(gap/2/r1,sw*.3),gi=Math.min(gap/2/r0,sw*.3);const o0=a0+go,o1=a1-go,i0=a0+gi,i1=a1-gi;const lg=(o1-o0)>Math.PI?1:0;
+  const dim=sel!=null&&sel!==i;const grow=sel===i?4:0;const R1=r1+grow-4*(sel!=null&&sel!==i?0:0);
+  s+='<path class="seg'+(dim?" dim":"")+(sel===i?" on":"")+'" d="M'+P(R1,o0)+"A"+R1+" "+R1+" 0 "+lg+" 1 "+P(R1,o1)+"L"+P(r0,i1)+"A"+r0+" "+r0+" 0 "+lg+" 0 "+P(r0,i0)+'Z" fill="'+p.color+'" data-act="donSel" data-i="'+i+'"><title>'+esc(p.label)+": "+esc(money(p.v))+"</title></path>"})}
+ s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r0-S*.045).toFixed(1)+'" fill="none" stroke="#4A4A50" stroke-width="'+Math.max(2.5,S*.012).toFixed(1)+'" stroke-dasharray="'+(S*.03).toFixed(1)+" "+(S*.022).toFixed(1)+'"/>';
+ return s+"</svg>";
+}
+function donutCard(d){
+ const parts=donutParts(d,donTipo),total=parts.reduce((s,p)=>s+p.v,0);if(donSel!=null&&donSel>=parts.length)donSel=null;
+ const sp=donSel!=null?parts[donSel]:null;const [yy,mm]=d.key.split("-").map(Number);
+ const center=sp?'<span class="dc-cat">'+esc(sp.label)+'</span><b class="num">'+shortMoney(sp.v)+'</b><span class="dc-pct num">'+Math.round(sp.v/total*100)+"%</span>":'<b class="num">'+shortMoney(total)+'</b><span class="dc-cat">'+(donTipo==="ingreso"?"Ingresos":"Gastos")+"</span>";
+ let h='<article class="card fd-cat don-card"><header class="don-head"><button class="iconbtn sm" data-act="donMes" data-v="-1" aria-label="Mes anterior">‹</button><b>'+cap(MESES[mm-1])+" de "+yy+'</b><button class="iconbtn sm" data-act="donMes" data-v="1" aria-label="Mes siguiente">›</button></header>';
+ h+='<div class="don-tools"><button class="linkbtn" data-act="catsMgr">'+ico("ajustes")+' Categorías y límites</button></div>';
+ h+='<div class="seg don-seg"><button data-act="donTipo" data-v="gasto" aria-selected="'+(donTipo==="gasto")+'">Gastos</button><button data-act="donTipo" data-v="ingreso" aria-selected="'+(donTipo==="ingreso")+'">Ingresos</button></div>';
+ h+='<div class="don-wrap">'+chartSlot(w=>ringSvg(parts,total,Math.min(300,w),donSel),Math.min(300,Math.round(((($("#finDash")||{}).clientWidth||340)-40)*.9)),"don-slot")+'<div class="don-center">'+center+'</div><button class="don-fab" data-act="movNuevo" data-v="'+donTipo+'" aria-label="Cargar '+(donTipo==="ingreso"?"un ingreso":"un gasto")+'">'+ico("plus",2.4)+"</button></div>";
+ h+=parts.length?'<ul class="don-legend">'+parts.map((p,i)=>'<li><button data-act="donSel" data-i="'+i+'" class="'+(donSel===i?"on":"")+'"><i style="background:'+p.color+'"></i><span>'+esc(p.label)+(p.ahorro?' <small class="muted">· ahorro</small>':"")+'</span><b class="num">'+money(p.v)+'</b><em class="num">'+Math.round(p.v/total*100)+"%</em></button></li>").join("")+"</ul>":'<p class="empty" style="text-align:center">'+(donTipo==="ingreso"?"No hay ingresos cargados este mes.":"No hay gastos cargados este mes.")+"</p>";
+ h+="</article>";
+ return h;
+}
+function movSheet(tipo){
+ const f=FIN();if(!f)return;const cfg=f.cfg();const d=f.data();const t=today();const def=d.key===t.slice(0,7)?t:d.key+"-01";
+ const o={tipo:tipo||"gasto",monto:"",concepto:"",cat:"",cuenta:cfg.cuentaDefault||"",fecha:def};
+ openSheet({title:"Nuevo movimiento",html:()=>{const cats=o.tipo==="ingreso"?(cfg.ingresos||[]):cfg.categorias;return '<form class="form" id="sfMov" autocomplete="off"><div class="seg don-seg" style="margin:0"><button type="button" data-act="movTipo" data-v="gasto" aria-selected="'+(o.tipo==="gasto")+'">Gasto</button><button type="button" data-act="movTipo" data-v="ingreso" aria-selected="'+(o.tipo==="ingreso")+'">Ingreso</button></div><div class="frow"><div class="field"><label for="mv-m">Monto</label><input type="number" id="mv-m" name="monto" min="0" step="any" inputmode="decimal" required value="'+esc(o.monto)+'" autofocus></div><div class="field"><label for="mv-f">Fecha</label><input type="date" id="mv-f" name="fecha" required value="'+o.fecha+'"></div></div><div class="field"><label for="mv-c">Concepto</label><input id="mv-c" name="concepto" maxlength="80" value="'+esc(o.concepto)+'" placeholder="'+(o.tipo==="ingreso"?"Ej.: Sueldo, Freelance":"Ej.: Coto, Uber, Netflix")+'"></div><div class="frow"><div class="field"><label for="mv-k">Categoría</label><select id="mv-k" name="cat"><option value="">Automática</option>'+cats.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===o.cat?" selected":"")+">"+esc(c.nombre)+"</option>").join("")+'</select></div><div class="field"><label for="mv-a">Cuenta</label><select id="mv-a" name="cuenta">'+cfg.cuentas.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===o.cuenta?" selected":"")+">"+esc(c.nombre)+"</option>").join("")+'</select></div></div><div class="sheet-actions"><span class="grow"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Guardar '+(o.tipo==="ingreso"?"ingreso":"gasto")+"</button></div></form>"},
+  keep:o,
+  forms:{sfMov(fd){const monto=+fd.get("monto");if(!(monto>0)){toast("Ingresá un monto mayor a cero.");return}const concepto=String(fd.get("concepto")||"").trim()||(o.tipo==="ingreso"?"Ingreso":"Gasto");let cat=fd.get("cat")||"";
+   if(!cat){if(o.tipo==="gasto")cat=f.classify(concepto);else{const n=norm(concepto);const src=(cfg.ingresos||[]).find(x=>norm(x.nombre)&&n.includes(norm(x.nombre))||String(x.claves||"").split(",").some(k=>k.trim()&&n.includes(norm(k))));cat=src?src.id:"ingreso"}}
+   f.addItems([{id:uid(),fecha:fd.get("fecha")||def,concepto,monto:Math.round(monto*100)/100,tipo:o.tipo,cat,cuenta:fd.get("cuenta")||cfg.cuentaDefault}]);donTipo=o.tipo;donSel=null;closeSheet();toast((o.tipo==="ingreso"?"Ingreso":"Gasto")+" guardado: "+money(monto))}}});
+}
+
+
+/* ================= FINANZAS: categorías y límites ================= */
+function cfgCopy(){const f=FIN();if(!f)return null;const nc=JSON.parse(JSON.stringify(f.cfg()));nc.categorias.forEach((c,i)=>{if(!c.color)c.color=DON_COLORS[i%DON_COLORS.length]});return nc}
+function catSpent(id){const f=FIN();if(!f)return 0;try{return (f.data().items||[]).filter(it=>it.tipo!=="ingreso"&&it.cat===id).reduce((s,it)=>s+(+it.monto||0),0)}catch(e){return 0}}
+function catsSheet(){
+ const f=FIN();if(!f)return;
+ openSheet({title:"Categorías y límites",html:()=>{const cfg=f.cfg();const ing=(cfg.ingresos||[]).reduce((s,i)=>s+(+i.monto||0),0);const lim=cfg.categorias.reduce((s,c)=>s+(c.ahorro?0:(+c.limite||0)),0);
+  return '<p class="small muted" style="margin-top:0">Tocá una categoría para cambiar su nombre, su límite mensual o las palabras con las que se reconoce. Los límites son por mes.</p>'+
+  '<div class="cm-sum"><span>Presupuestado <b class="num">'+money(lim)+'</b></span><span>Ingresos esperados <b class="num">'+money(ing)+'</b></span><span>Margen <b class="num '+(ing-lim<0?"neg":"pos")+'">'+money(ing-lim)+"</b></span></div>"+
+  '<ul class="cm-list">'+cfg.categorias.map((c,i)=>{const sp=catSpent(c.id),l=+c.limite||0,p=l?Math.min(1,sp/l):0;return '<li><button data-act="catEdit" data-id="'+esc(c.id)+'" data-from="mgr"><i style="background:'+catColor(cfg.categorias,c.id)+'"></i><span class="cm-n">'+esc(c.nombre)+(c.ahorro?' <small class="muted">· ahorro</small>':"")+'<span class="cm-bar"><em style="width:'+(p*100).toFixed(0)+"%;background:"+(l&&sp>l?"var(--crit)":"var(--ink)")+'"></em></span></span><span class="cm-l num">'+(c.ahorro?"—":l?money(sp)+" / "+money(l):"Sin límite")+"</span></button></li>"}).join("")+"</ul>"+
+  '<div class="sheet-actions"><button class="btn primary" data-act="catEdit" data-id="" data-from="mgr">'+ico("plus")+' Nueva categoría</button><span class="grow"></span><button type="button" class="btn" data-act="close">Listo</button></div>'}});
+}
+function catSheet(id,fromMgr){
+ const f=FIN();if(!f)return;const cfg=f.cfg();const c=id?cfg.categorias.find(x=>x.id===id):{nombre:"",limite:"",claves:"",ahorro:false};if(!c)return;
+ const sp=id?catSpent(id):0;
+ openSheet({title:id?c.nombre:"Nueva categoría",html:()=>'<form class="form" id="sfCat" autocomplete="off"><div class="field"><label for="ct-n">Nombre</label><input id="ct-n" name="nombre" required maxlength="40" value="'+esc(c.nombre)+'" placeholder="Ej.: Mascotas, Educación, Regalos"'+(id?"":" autofocus")+'></div>'+
+  '<div class="field"><label for="ct-l">Límite mensual</label><input type="number" id="ct-l" name="limite" min="0" step="any" inputmode="decimal" value="'+esc(c.limite||"")+'" placeholder="0 = sin límite"'+(id?" autofocus":"")+'>'+(id?'<span class="small muted">Este mes llevás gastado '+money(sp)+".</span>":"")+"</div>"+
+  (id==="otros"?"":'<div class="field"><label for="ct-k">Palabras que la identifican</label><textarea id="ct-k" name="claves" rows="3" placeholder="Separadas por coma. Ej.: veterinaria, alimento perro, petshop">'+esc(c.claves||"")+'</textarea><span class="small muted">Cuando un movimiento tiene alguna de estas palabras, va solo a esta categoría.</span></div>')+
+  '<div class="chips"><label><input type="checkbox" name="ahorro" value="1"'+(c.ahorro?" checked":"")+'><span>Es ahorro o inversión (no cuenta como gasto)</span></label></div>'+
+  '<div class="sheet-actions">'+(id&&id!=="otros"?delBtn("cat",id,"Eliminar",' data-from="'+(fromMgr?"mgr":"")+'"'):"")+'<span class="grow"></span><button type="button" class="btn" data-act="'+(fromMgr?"catsMgr":"close")+'">'+(fromMgr?"Volver":"Cancelar")+'</button><button class="btn primary">Guardar</button></div></form>',
+ forms:{sfCat(fd){const nombre=String(fd.get("nombre")||"").trim();if(!nombre){toast("Poné un nombre.");return}const nc=cfgCopy();const lim=Math.max(0,+fd.get("limite")||0);
+  const dup=nc.categorias.find(x=>norm(x.nombre)===norm(nombre)&&x.id!==id);if(dup){toast("Ya existe una categoría con ese nombre.");return}
+  const o={nombre,limite:lim,ahorro:!!fd.get("ahorro")};if(id!=="otros")o.claves=String(fd.get("claves")||"").trim();
+  if(id){Object.assign(nc.categorias.find(x=>x.id===id),o)}else{const nid="c"+uid();const used=nc.categorias.map(x=>x.color);o.color=DON_COLORS.find(x=>!used.includes(x))||DON_COLORS[nc.categorias.length%DON_COLORS.length];const k=nc.categorias.findIndex(x=>x.id==="otros");nc.categorias.splice(k<0?nc.categorias.length:k,0,Object.assign({id:nid,claves:""},o))}
+  f.saveCfg(nc);toast(id?"Categoría guardada":"Categoría creada");if(fromMgr)catsSheet();else closeSheet();renderFinDash()}}});
+}
 
 /* ================= render general ================= */
 const R={hoy:renderHoy,tareas:renderTareas,habitos:renderHabitos,enfoque:renderEnfoque,entreno:renderEntreno,estudio:renderEstudio,recordatorios:renderRecordatorios,ajustes:renderAjustes};
@@ -2335,6 +2552,18 @@ document.addEventListener("focusout",()=>setTimeout(()=>{if(pending&&!SH){const 
 /* ================= acciones ================= */
 const ACT={
  close:()=>closeSheet(),
+ catsMgr:()=>catsSheet(),
+ catEdit:b=>catSheet(b.dataset.id||null,b.dataset.from==="mgr"),
+ donTipo:b=>{donTipo=b.dataset.v;donSel=null;renderFinDash()},
+ donSel:b=>{const i=+b.dataset.i;donSel=donSel===i?null:i;renderFinDash()},
+ donMes:b=>{const btn=$(+b.dataset.v<0?"#prevM":"#nextM");donSel=null;if(btn)btn.click()},
+ movNuevo:b=>movSheet(b.dataset.v),
+ movTipo:b=>{if(!SH||!SH.keep)return;const fm=$("#sfMov");if(fm){const fd=new FormData(fm);SH.keep.monto=fd.get("monto")||"";SH.keep.concepto=fd.get("concepto")||"";SH.keep.fecha=fd.get("fecha")||SH.keep.fecha;SH.keep.cuenta=fd.get("cuenta")||SH.keep.cuenta}SH.keep.tipo=b.dataset.v;SH.keep.cat="";SH.title="Nuevo movimiento";drawSheet()},
+ syncIn:()=>{window.CorchoSync&&window.CorchoSync.signIn()},
+ syncOut:b=>{if(!armed(b))return;window.CorchoSync&&window.CorchoSync.signOut();toast("Sesión cerrada. Tus datos quedan en este dispositivo.")},
+ syncNow:()=>{const S=window.CorchoSync;if(S)S.syncNow().then(()=>toast("Sincronizado"))},
+ syncChoice:b=>{const S=window.CorchoSync;if(S&&S.chooseFirst){S.chooseFirst(b.dataset.v);closeSheet();toast(b.dataset.v==="nube"?"Usando los datos de la nube":"Subiendo los datos de este dispositivo")}},
+ syncLater:()=>{try{localStorage.setItem("corcho-sync-later",today())}catch(e){}render()},
  tVista:b=>{tV=b.dataset.v;render()},
  tNav:b=>{const v=+b.dataset.v;if(!v){tD=null;tMini=null}else{const cur=tD||today(),m=tView();tD=m==="mes"?addMonths(cur,v):addDays(cur,m==="semana"?7*v:v);tMini=null}render()},
  tPick:b=>{tD=b.dataset.v;tMini=null;if(tView()==="lista"||tView()==="mes")tV="dia";render()},
@@ -2409,9 +2638,10 @@ const ACT={
   else if(w==="tema"){const m=materia(b.dataset.m);if(m){m.temas=m.temas.filter(x=>x.id!==id);put("estudio");drawSheet()}}
   else if(w==="pago"){D.pagos.items=D.pagos.items.filter(x=>x.id!==id);put("pagos");closeSheet();renderPagos();toast("Pago eliminado")}
   else if(w==="tarjeta"){D.pagos.tarjetas=D.pagos.tarjetas.filter(x=>x.id!==id);put("pagos");closeSheet();renderPagos();toast("Tarjeta eliminada")}
+  else if(w==="cat"){const f=FIN();if(f){const nc=cfgCopy();nc.categorias=nc.categorias.filter(x=>x.id!==id);f.saveCfg(nc);toast("Categoría eliminada. Sus movimientos pasan a Otros.");if(b.dataset.from==="mgr")catsSheet();else closeSheet();renderFinDash()}}
   else if(w==="rec"){D.rec=D.rec.filter(x=>x.id!==id);put("rec");closeSheet();toast("Recordatorio eliminado")}
   else if(w==="remHechos"){D.rec=D.rec.filter(x=>!x.hecho);put("rec");render()}
-  else if(w==="todo"){try{Object.keys(localStorage).filter(k=>k.indexOf("corcho:")===0||k.indexOf("ldc:")===0).forEach(k=>localStorage.removeItem(k))}catch(e){}toast("Datos borrados. Recargando…");setTimeout(()=>location.reload(),800)}
+  else if(w==="todo"){const SY=window.CorchoSync;const done=()=>{try{Object.keys(localStorage).filter(k=>k.indexOf("corcho:")===0||k.indexOf("ldc:")===0).forEach(k=>localStorage.removeItem(k))}catch(e){}toast("Datos borrados. Recargando…");setTimeout(()=>location.reload(),800)};if(SY&&SY.user)SY.wipeRemote().then(done,done);else done()}
  }
 };
 const FORMS={
@@ -2427,7 +2657,7 @@ document.addEventListener("click",e=>{
  const f=ACT[b.dataset.act];if(f){e.preventDefault();f(b,e)}
 });
 document.addEventListener("submit",e=>{const f=e.target;if(SH&&SH.forms&&SH.forms[f.id]){e.preventDefault();SH.forms[f.id](new FormData(f),f);return}if(FORMS[f.id]){e.preventDefault();FORMS[f.id](new FormData(f),f)}});
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(SH)closeSheet();else closeDrawer()});
+document.addEventListener("keydown",e=>{const rb=e.target.closest&&e.target.closest('[role="button"][data-act]');if(rb&&(e.key==="Enter"||e.key===" ")){e.preventDefault();rb.click();return}if(e.key!=="Escape")return;if(SH)closeSheet();else closeDrawer()});
 document.addEventListener("input",e=>{
  const el=e.target;
  if(el.dataset.gx!==undefined&&D.gym.activo){const ex=D.gym.activo.ejercicios[+el.dataset.gx];if(!ex)return;if(el.dataset.gs!==undefined){const s=ex.series[+el.dataset.gs];if(s)s[el.dataset.gf]=el.value}else ex[el.dataset.gf]=el.value;gymSaveSoon()}
@@ -2450,7 +2680,25 @@ setInterval(checkRem,15000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){checkRem();const T=D.enfoque.timer;if(T.endAt&&Date.now()>=T.endAt)fComplete();safeRender()}});
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener&&window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",applyTheme);
 window.addEventListener("hashchange",()=>{const h=(location.hash||"").slice(1);if(VIEWS.includes(h)&&h!==view)go(h)});
-window.CorchoApp={go,render};
+function reloadData(){D.cfg=Object.assign(clone(DEF_CFG),load("ajustes",{}));D.tareas=load("tareas",[]);D.habitos=load("habitos",[]);const ef=load("enfoque",null);if(ef){const tm=D.enfoque.timer;D.enfoque=ef;if(tm&&tm.endAt&&!(ef.timer&&ef.timer.endAt))D.enfoque.timer=tm}D.gym=load("entreno",{rutinas:SEED_RUT,logs:[],activo:null});D.estudio=load("estudio",{materias:[],examenes:[],sesiones:[]});D.rec=load("recordatorios",[]);D.pagos=Object.assign({items:[],tarjetas:[],hist:[]},load("pagos",{}));try{window.CorchoFin&&window.CorchoFin.reload()}catch(e){}if(SH){badges();return}safeRender();if(view==="finanzas"&&$("#p-pagos")&&!$("#p-pagos").hidden)renderPagos()}
+window.CorchoApp={go,render,reloadData};
+/* estado de sincronización en la interfaz */
+const SYNC_TXT={"sin-config":"Sin configurar","cargando":"Conectando…","desconectado":"Sin iniciar sesión","conectando":"Iniciando sesión…","sincronizando":"Sincronizando…","ok":"Sincronizado","error":"Error","sin-conexion":"Sin conexión"};
+function syncIcon(){const S=window.CorchoSync;const st=S?S.state:"sin-config";$$(".sync-ic").forEach(b=>{b.dataset.st=st;b.title="Sincronización: "+(SYNC_TXT[st]||st);b.setAttribute("aria-label",b.title)})}
+function syncCard(){const S=window.CorchoSync;
+ if(!S||!S.available)return card("ajustes","Sincronización","",'<p class="small" style="margin:0">La sincronización todavía no está configurada. Por ahora tus datos se guardan solo en este dispositivo.</p>');
+ const st=S.state,u=S.user;let body='<div class="sync-row"><span class="sync-dot" data-st="'+st+'"></span><b>'+(SYNC_TXT[st]||st)+"</b></div>";
+ if(u)body+='<p class="small" style="margin:6px 0 0">Conectado como <b>'+esc(u.email||u.name||"tu cuenta")+'</b>. Lo que cargues acá aparece en todos tus dispositivos donde inicies sesión con esta cuenta.</p>'+(S.lastSync?'<p class="small muted" style="margin:4px 0 0">Última sincronización: '+new Date(S.lastSync).toLocaleString("es-AR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+"</p>":"");
+ else body+='<p class="small" style="margin:6px 0 0">Iniciá sesión con Google para guardar tus datos en la nube y verlos igual en el teléfono y en la computadora.</p>';
+ if(S.error)body+='<p class="small neg" style="margin:8px 0 0">'+esc(S.error)+"</p>";
+ const foot=u?'<button class="btn" data-act="syncNow">Sincronizar ahora</button><button class="btn" data-act="syncOut">Cerrar sesión</button>':(st==="cargando"||st==="sin-conexion"?"":'<button class="btn primary" data-act="syncIn">'+GOOGLE_G+" Iniciar sesión con Google</button>");
+ return card("ajustes","Sincronización","",body,foot);}
+const GOOGLE_G='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.5 5.5 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.9-3c-1.1.7-2.4 1.2-4 1.2-3.1 0-5.7-2.1-6.6-4.9h-4v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.4 14.4a7.2 7.2 0 0 1 0-4.7V6.6h-4a12 12 0 0 0 0 10.8l4-3z"/><path fill="#EA4335" d="M12 4.8c1.7 0 3.3.6 4.5 1.8l3.4-3.4A12 12 0 0 0 1.4 6.6l4 3.1C6.3 6.9 8.9 4.8 12 4.8z"/></svg>';
+function syncChoiceSheet(){openSheet({title:"Ya tenés datos en la nube",html:()=>'<p style="margin-top:0">Tu cuenta ya tiene datos guardados de otro dispositivo, y este dispositivo también tiene datos propios. ¿Con cuáles querés quedarte?</p><p class="small muted">Si no estás seguro, primero descargá una copia de este dispositivo desde Ajustes.</p><div class="form"><button class="btn primary lg" data-act="syncChoice" data-v="nube">Usar los datos de la nube</button><button class="btn lg" data-act="syncChoice" data-v="dispositivo">Usar los datos de este dispositivo</button></div><p class="small muted" style="margin-bottom:0">Los datos que no elijas se reemplazan.</p>'})}
+let syncPrevSt=null;
+function onSyncChange(S){syncIcon();if(S.chooseFirst&&!(SH&&SH.title==="Ya tenés datos en la nube"))syncChoiceSheet();if(view==="ajustes"&&!SH)renderAjustes();if(view==="hoy"&&syncPrevSt!==S.state&&!SH)renderHoy();if(S.state==="ok"&&syncPrevSt==="conectando")toast("Sesión iniciada. Tus datos se sincronizan solos.");syncPrevSt=S.state}
+if(window.CorchoSync)window.CorchoSync.onChange(onSyncChange);
+syncIcon();
 applyTheme();buildNav();
 const h0=(location.hash||"").replace("#","");
 go(VIEWS.includes(h0)?h0:"hoy");
