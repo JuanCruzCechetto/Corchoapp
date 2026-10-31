@@ -1,5 +1,5 @@
 // Corcho App: guarda la app en el teléfono para que abra sin internet
-const CACHE = "corcho-v7";
+const CACHE = "corcho-v8";
 const ARCHIVOS = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-180.png", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./firebase-config.js"];
 
 self.addEventListener("install", e => {
