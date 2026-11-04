@@ -806,7 +806,7 @@ function renderFinDash(){
  h+='<article class="card fd-movs"><header class="card-head"><h2>Últimos movimientos</h2><button class="linkbtn" data-act="finMovs">Ver todos →</button></header>'+(lastM.length?'<div class="tablewrap ptw"><table class="ptable"><thead><tr><th>Tipo</th><th>Descripción</th><th>Cuenta</th><th>Categoría</th><th>Fecha</th><th class="r">Monto</th></tr></thead><tbody>'+lastM.map(it=>{const inn=it.tipo==="ingreso";return "<tr><td>"+(inn?IC_IN:IC_OUT)+"</td><td><button class=\"cell-link\" data-act=\"movEdit\" data-id=\""+esc(it.id)+"\">"+esc(it.concepto)+"</button></td><td>"+esc(nameIn(d.cfg.cuentas,it.cuenta)||"—")+"</td><td>"+esc(inn?"Ingreso":nameIn(d.cfg.categorias,it.cat)||"—")+'</td><td class="num">'+parseISO(it.fecha).getDate()+" "+MC[parseISO(it.fecha).getMonth()]+'</td><td class="r num '+(inn?"pos":"neg")+'">'+(inn?"+ ":"− ")+money(it.monto)+"</td></tr>"}).join("")+"</tbody></table></div>":'<p class="empty">Pegá tus movimientos en "Cargar movimientos" para empezar.</p>')+"</article>";
  el.innerHTML=h;if(el.offsetParent)drawCharts(el);
 }
-window.CorchoFinHook=()=>{try{renderFinDash()}catch(e){}};
+window.CorchoFinHook=()=>{try{renderFinDash()}catch(e){}try{const pf=$("#p-fijos");if(pf&&!pf.hidden)renderFijos()}catch(e){}};
 window.CorchoPagosRender=()=>{try{renderPagos()}catch(e){}};
 
 
@@ -885,6 +885,56 @@ function catSheet(id,fromMgr){
   f.saveCfg(nc);toast(id?"Categoría guardada":"Categoría creada");if(fromMgr)catsSheet();else closeSheet();renderFinDash()}}});
 }
 
+
+/* ================= FINANZAS: gastos fijos del mes (checklist) ================= */
+const FIJOS_GRUPOS=[["fijos","Gastos fijos"],["cuotas","Cuotas"],["subs","Suscripciones"],["variables","Variables"]];
+function fijosSeed(){let n=0;const it=(nombre,grupo,cat,cuota)=>({id:"f"+(++n),nombre,grupo,cat,monto:null,cuota:cuota||null});
+ return {registrar:true,meses:{},items:[it("Moto","fijos","transporte"),it("Obra social","fijos","salud"),it("Facultad","fijos","otros"),it("Gimnasio","fijos","salud"),it("Gato","fijos","otros"),it("Psicóloga","fijos","salud"),it("Teléfono","fijos","servicios"),
+  it("Monitor","cuotas","deudas",{total:6,inicio:"2026-06"}),it("Remera","cuotas","deudas",{total:3,inicio:"2026-09"}),it("Yogurtera","cuotas","deudas",{total:6,inicio:"2026-10"}),
+  it("Amazon","subs","subs"),it("Gemini","subs","subs"),it("Google","subs","subs"),it("YouTube","subs","subs"),it("Claude","subs","subs"),it("Salidas","variables","ocio")]}}
+D.fijos=load("fijos",null)||fijosSeed();KEY.fijos="fijos";
+const monthDiff=(a,b)=>{const [y1,m1]=a.split("-").map(Number),[y2,m2]=b.split("-").map(Number);return (y2-y1)*12+(m2-m1)};
+function cuotaN(it,k){if(!it.cuota)return null;return monthDiff(it.cuota.inicio,k)+1}
+function fijosDelMes(k){return D.fijos.items.filter(it=>{if(!it.cuota)return true;const n=cuotaN(it,k);return n>=1&&n<=it.cuota.total})}
+function fijosKey(){const f=FIN();try{return f?f.data().key:today().slice(0,7)}catch(e){return today().slice(0,7)}}
+function renderFijos(){
+ const el=$("#p-fijos");if(!el)return;const k=fijosKey();const [yy,mm]=k.split("-").map(Number);const mes=D.fijos.meses[k]||{pagado:{}};
+ const L=fijosDelMes(k);const pag=L.filter(it=>mes.pagado[it.id]);
+ const tot=L.reduce((s,it)=>s+(+it.monto||0),0),pagT=pag.reduce((s,it)=>s+(+(mes.pagado[it.id].monto??it.monto)||0),0);const sinMonto=L.filter(it=>!(+it.monto>0)).length;
+ let h='<div class="pg-top"><div><h2 class="sec-h" style="margin:0">Gastos fijos de '+MESES[mm-1]+'</h2><span class="small muted">Completá los montos una vez y tildá cada uno cuando lo pagues. Los montos quedan para los meses siguientes.</span></div><div class="vact"><button class="btn primary" data-act="fijoNuevo">'+ico("plus")+" Agregar</button></div></div>";
+ h+='<div class="card fx-sum"><div class="fx-top"><div><span class="eyebrow">Pagado</span><b class="num">'+pag.length+" de "+L.length+'</b></div><div><span class="eyebrow">Total del mes</span><b class="num">'+money(tot)+'</b></div><div><span class="eyebrow">Ya pagaste</span><b class="num pos">'+money(pagT)+'</b></div><div><span class="eyebrow">Falta pagar</span><b class="num'+(tot-pagT>0?" neg":"")+'">'+money(Math.max(0,tot-pagT))+'</b></div></div><div class="tr-bar"><i style="width:'+(L.length?pag.length/L.length*100:0).toFixed(1)+'%"></i></div>'+
+  (sinMonto?'<p class="small muted" style="margin:8px 0 0">'+sinMonto+(sinMonto===1?" gasto todavía no tiene monto.":" gastos todavía no tienen monto.")+"</p>":"")+
+  '<label class="fx-reg"><input type="checkbox" id="fxReg"'+(D.fijos.registrar?" checked":"")+'> Al tildar, sumarlo a mis gastos del mes</label></div>';
+ FIJOS_GRUPOS.forEach(([g,gl])=>{const items=L.filter(it=>(it.grupo||"fijos")===g);if(!items.length)return;const gt=items.reduce((s,it)=>s+(+it.monto||0),0),gp=items.filter(it=>mes.pagado[it.id]).length;
+  h+='<article class="card fx-group"><header class="card-head"><h2>'+gl+'</h2><span class="small muted num">'+gp+"/"+items.length+(gt?" · "+money(gt):"")+'</span></header><ul class="fx-list">'+items.map(it=>{const p=mes.pagado[it.id];const n=cuotaN(it,k);
+   return '<li class="fx-row'+(p?" done":"")+'"><button class="chk'+(p?" on":"")+'" data-act="fijoCheck" data-id="'+it.id+'" aria-pressed="'+(!!p)+'" aria-label="'+(p?"Marcar como no pagado":"Marcar como pagado")+": "+esc(it.nombre)+'">'+ico("check",3)+'</button><button class="fx-name" data-act="fijoEdit" data-id="'+it.id+'"><span>'+esc(it.nombre)+"</span>"+(n?'<small class="num">Cuota '+n+"/"+it.cuota.total+(n===it.cuota.total?" · última":"")+"</small>":"")+(p&&p.fecha?'<small>Pagado '+fmtDay(p.fecha).toLowerCase()+"</small>":"")+'</button><label class="fx-amt"><span class="sr">Monto de '+esc(it.nombre)+'</span><input type="number" inputmode="decimal" min="0" step="any" id="fx-'+it.id+'" data-fijo="'+it.id+'" value="'+(it.monto??"")+'" placeholder="Monto"></label></li>'}).join("")+"</ul></article>"});
+ if(!L.length)h+='<p class="empty">No hay gastos fijos para este mes. Agregá el primero con el botón de arriba.</p>';
+ el.innerHTML=h;
+}
+function fijoCheck(id){
+ const k=fijosKey(),it=D.fijos.items.find(x=>x.id===id);if(!it)return;const mes=D.fijos.meses[k]=D.fijos.meses[k]||{pagado:{}};const f=FIN();
+ if(mes.pagado[id]){const p=mes.pagado[id];delete mes.pagado[id];if(p.movId&&f){f.deleteItem(p.movId).catch(()=>{})}put("fijos");renderFijos();toast(it.nombre+": marcado como no pagado"+(p.movId?" y quitado de tus gastos":""));return}
+ const t=today(),last=k+"-"+pad2(monthDays(k));const fecha=k===t.slice(0,7)?t:(k<t.slice(0,7)?last:k+"-01");
+ const p={fecha,monto:+it.monto||0};
+ if(D.fijos.registrar&&f&&p.monto>0){const n=cuotaN(it,k);const mid=uid();try{const cfg=f.cfg();const cat=cfg.categorias.some(c=>c.id===it.cat)?it.cat:f.classify(it.nombre);f.addItems([{id:mid,fecha,concepto:it.nombre+(n?" (cuota "+n+"/"+it.cuota.total+")":""),monto:p.monto,tipo:"gasto",cat,cuenta:cfg.cuentaDefault}]);p.movId=mid}catch(e){}}
+ mes.pagado[id]=p;put("fijos");renderFijos();const L=fijosDelMes(k);const done=L.filter(x=>mes.pagado[x.id]).length;
+ toast(done===L.length?"¡Pagaste todos los gastos fijos del mes!":it.nombre+" pagado"+(p.movId?". Lo sumé a tus gastos.":!(p.monto>0)?". Cargale el monto para que se sume a tus gastos.":""));
+}
+function fijoSheet(id){
+ const f=FIN();const cfg=f?f.cfg():{categorias:[]};const it=id?D.fijos.items.find(x=>x.id===id):{nombre:"",grupo:"fijos",cat:"",monto:null,cuota:null};if(!it)return;const k=fijosKey();const n=cuotaN(it,k);
+ openSheet({title:id?it.nombre:"Nuevo gasto fijo",html:()=>'<form class="form" id="sfFijo" autocomplete="off"><div class="field"><label for="fx-n">Nombre</label><input id="fx-n" name="nombre" required maxlength="50" value="'+esc(it.nombre)+'" placeholder="Ej.: Internet, Alquiler, Seguro"'+(id?"":" autofocus")+'></div>'+
+  '<div class="frow"><div class="field"><label for="fx-m">Monto mensual</label><input type="number" id="fx-m" name="monto" min="0" step="any" inputmode="decimal" value="'+(it.monto??"")+'"></div><div class="field"><label for="fx-c">Categoría</label><select id="fx-c" name="cat"><option value="">Automática</option>'+cfg.categorias.filter(c=>!c.ahorro).map(c=>'<option value="'+esc(c.id)+'"'+(c.id===it.cat?" selected":"")+">"+esc(c.nombre)+"</option>").join("")+"</select></div></div>"+
+  '<div class="field"><span class="flabel">Grupo</span><div class="chips">'+FIJOS_GRUPOS.map(([g,l])=>'<label><input type="radio" name="grupo" value="'+g+'"'+((it.grupo||"fijos")===g?" checked":"")+"><span>"+l+"</span></label>").join("")+"</div></div>"+
+  '<div class="frow f-cuo"><div class="field"><label for="fx-cn">Cuota de este mes</label><input type="number" id="fx-cn" name="cn" min="1" max="120" value="'+(n||1)+'"></div><div class="field"><label for="fx-ct">Total de cuotas</label><input type="number" id="fx-ct" name="ct" min="1" max="120" value="'+(it.cuota?it.cuota.total:6)+'"></div></div>'+
+  '<p class="small muted f-cuo" style="margin:0">Cada mes avanza sola una cuota. Cuando termina, deja de aparecer.</p>'+
+  '<div class="sheet-actions">'+(id?delBtn("fijo",id):"")+'<span class="grow"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Guardar</button></div></form>',
+ forms:{sfFijo(fd){const nombre=String(fd.get("nombre")||"").trim();if(!nombre)return;const grupo=fd.get("grupo")||"fijos";const m=fd.get("monto");
+  const o={nombre,grupo,cat:fd.get("cat")||"",monto:m===""||m==null?null:Math.max(0,+m||0),cuota:null};
+  if(grupo==="cuotas"){const cn=Math.max(1,Math.round(+fd.get("cn")||1)),ct=Math.max(cn,Math.round(+fd.get("ct")||cn));o.cuota={total:ct,inicio:addMonths(k+"-01",-(cn-1)).slice(0,7)}}
+  if(id)Object.assign(it,o);else D.fijos.items.push(Object.assign({id:"f"+uid()},o));put("fijos");closeSheet();renderFijos();toast(id?"Guardado":"Gasto fijo agregado")}}});
+}
+window.CorchoFijosRender=()=>{try{renderFijos()}catch(e){}};
+
 /* ================= render general ================= */
 const R={hoy:renderHoy,tareas:renderTareas,habitos:renderHabitos,enfoque:renderEnfoque,entreno:renderEntreno,estudio:renderEstudio,recordatorios:renderRecordatorios,ajustes:renderAjustes};
 let pending=false;
@@ -895,6 +945,9 @@ document.addEventListener("focusout",()=>setTimeout(()=>{if(pending&&!SH){const 
 /* ================= acciones ================= */
 const ACT={
  close:()=>closeSheet(),
+ fijoCheck:b=>fijoCheck(b.dataset.id),
+ fijoEdit:b=>fijoSheet(b.dataset.id),
+ fijoNuevo:()=>fijoSheet(),
  catsMgr:()=>catsSheet(),
  catEdit:b=>catSheet(b.dataset.id||null,b.dataset.from==="mgr"),
  donTipo:b=>{donTipo=b.dataset.v;donSel=null;renderFinDash()},
@@ -984,6 +1037,7 @@ const ACT={
   else if(w==="tarjeta"){D.pagos.tarjetas=D.pagos.tarjetas.filter(x=>x.id!==id);put("pagos");closeSheet();renderPagos();toast("Tarjeta eliminada")}
   else if(w==="cat"){const f=FIN();if(f){const nc=cfgCopy();nc.categorias=nc.categorias.filter(x=>x.id!==id);f.saveCfg(nc);toast("Categoría eliminada. Sus movimientos pasan a Otros.");if(b.dataset.from==="mgr")catsSheet();else closeSheet();renderFinDash()}}
   else if(w==="mov"){const f=FIN();if(f){f.deleteItem(id).then(()=>renderFinDash());closeSheet();toast("Movimiento borrado")}}
+  else if(w==="fijo"){D.fijos.items=D.fijos.items.filter(x=>x.id!==id);put("fijos");closeSheet();renderFijos();toast("Gasto fijo eliminado")}
   else if(w==="rec"){D.rec=D.rec.filter(x=>x.id!==id);put("rec");closeSheet();toast("Recordatorio eliminado")}
   else if(w==="remHechos"){D.rec=D.rec.filter(x=>!x.hecho);put("rec");render()}
   else if(w==="todo"){const SY=window.CorchoSync;const done=()=>{try{Object.keys(localStorage).filter(k=>k.indexOf("corcho:")===0||k.indexOf("ldc:")===0).forEach(k=>localStorage.removeItem(k))}catch(e){}toast("Datos borrados. Recargando…");setTimeout(()=>location.reload(),800)};if(SY&&SY.user)SY.wipeRemote().then(done,done);else done()}
@@ -1009,6 +1063,8 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
  const el=e.target;
+ if(el.dataset&&el.dataset.fijo){const it=D.fijos.items.find(x=>x.id===el.dataset.fijo);if(it){const v=el.value;it.monto=v===""?null:Math.max(0,+v||0);put("fijos");renderFijos()}return}
+ if(el.id==="fxReg"){D.fijos.registrar=el.checked;put("fijos");toast(el.checked?"Al tildar se suman a tus gastos":"Al tildar solo se marcan como pagados");return}
  if(el.id==="fLabel"){D.enfoque.timer.label=el.value;put("enfoque");return}
  if(el.dataset.cfg){let v=el.value;if(el.dataset.n){v=Math.max(+el.min||0,Math.min(+el.max||999,Math.round(+v||0)))}D.cfg[el.dataset.cfg]=v;put("cfg");toast("Guardado");return}
  if(el.id==="aImport"&&el.files&&el.files[0]){importAll(el.files[0]);el.value=""}
@@ -1025,7 +1081,7 @@ setInterval(checkRem,15000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){checkRem();const T=D.enfoque.timer;if(T.endAt&&Date.now()>=T.endAt)fComplete();safeRender()}});
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener&&window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",applyTheme);
 window.addEventListener("hashchange",()=>{const h=(location.hash||"").slice(1);if(VIEWS.includes(h)&&h!==view)go(h)});
-function reloadData(){D.cfg=Object.assign(clone(DEF_CFG),load("ajustes",{}));D.tareas=load("tareas",[]);D.habitos=load("habitos",[]);const ef=load("enfoque",null);if(ef){const tm=D.enfoque.timer;D.enfoque=ef;if(tm&&tm.endAt&&!(ef.timer&&ef.timer.endAt))D.enfoque.timer=tm}D.gym=load("entreno",{rutinas:SEED_RUT,logs:[],activo:null});D.estudio=load("estudio",{materias:[],examenes:[],sesiones:[]});D.rec=load("recordatorios",[]);D.pagos=Object.assign({items:[],tarjetas:[],hist:[]},load("pagos",{}));try{window.CorchoFin&&window.CorchoFin.reload()}catch(e){}if(SH){badges();return}safeRender();if(view==="finanzas"&&$("#p-pagos")&&!$("#p-pagos").hidden)renderPagos()}
+function reloadData(){D.cfg=Object.assign(clone(DEF_CFG),load("ajustes",{}));D.tareas=load("tareas",[]);D.habitos=load("habitos",[]);const ef=load("enfoque",null);if(ef){const tm=D.enfoque.timer;D.enfoque=ef;if(tm&&tm.endAt&&!(ef.timer&&ef.timer.endAt))D.enfoque.timer=tm}D.gym=load("entreno",{rutinas:SEED_RUT,logs:[],activo:null});D.estudio=load("estudio",{materias:[],examenes:[],sesiones:[]});D.rec=load("recordatorios",[]);D.pagos=Object.assign({items:[],tarjetas:[],hist:[]},load("pagos",{}));D.fijos=load("fijos",null)||D.fijos;try{window.CorchoFin&&window.CorchoFin.reload()}catch(e){}if(SH){badges();return}safeRender();if(view==="finanzas"&&$("#p-pagos")&&!$("#p-pagos").hidden)renderPagos();if(view==="finanzas"&&$("#p-fijos")&&!$("#p-fijos").hidden)renderFijos()}
 window.CorchoApp={go,render,reloadData};
 /* estado de sincronización en la interfaz */
 const SYNC_TXT={"sin-config":"Sin configurar","cargando":"Conectando…","desconectado":"Sin iniciar sesión","conectando":"Iniciando sesión…","sincronizando":"Sincronizando…","ok":"Sincronizado","error":"Error","sin-conexion":"Sin conexión"};

@@ -719,3 +719,27 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
 .cm-bar{display:block;height:4px;border-radius:2px;background:var(--rule);overflow:hidden;max-width:220px}
 .cm-bar em{display:block;height:100%}
 .cm-l{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+
+/* Gastos fijos (checklist) */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.fx-sum{margin-bottom:14px}
+.fx-top{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 18px;margin-bottom:12px}
+.fx-top>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fx-top b{font-size:19px;font-weight:700;letter-spacing:-.02em}
+@media (max-width:560px){.fx-top{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.fx-reg{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--ink-2);cursor:pointer}
+.fx-reg input{width:16px;height:16px;accent-color:#FFFFFF}
+.fx-group{margin-bottom:14px}
+.fx-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.fx-row{display:grid;grid-template-columns:auto minmax(0,1fr) 128px;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule-2)}
+.fx-row:last-child{border-bottom:0}
+.fx-row .chk{width:26px;height:26px;margin:0}
+.fx-name{display:flex;flex-direction:column;gap:1px;border:0;background:none;padding:4px 0;text-align:left;cursor:pointer;min-width:0;color:var(--ink)}
+.fx-name span{font-weight:500;font-size:15px;overflow-wrap:anywhere}
+.fx-name small{font-size:11.5px;color:var(--ink-2)}
+.fx-row.done .fx-name span{text-decoration:line-through;color:var(--ink-2)}
+.fx-amt input{width:100%;text-align:right;font-family:var(--f-num);padding:8px 10px}
+.fx-row.done .fx-amt input{color:var(--ink-2)}
+.f-cuo{display:none}
+.form:has(input[name=grupo][value=cuotas]:checked) .f-cuo{display:grid}
+.form:has(input[name=grupo][value=cuotas]:checked) p.f-cuo{display:block}
