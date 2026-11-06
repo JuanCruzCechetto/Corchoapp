@@ -841,7 +841,7 @@ function donutCard(d){
  h+='<div class="don-tools"><button class="linkbtn" data-act="catsMgr">'+ico("ajustes")+' Categorías y límites</button></div>';
  h+='<div class="seg don-seg"><button data-act="donTipo" data-v="gasto" aria-selected="'+(donTipo==="gasto")+'">Gastos</button><button data-act="donTipo" data-v="ingreso" aria-selected="'+(donTipo==="ingreso")+'">Ingresos</button></div>';
  h+='<div class="don-wrap">'+chartSlot(w=>ringSvg(parts,total,Math.min(300,w),donSel),Math.min(300,Math.round(((($("#finDash")||{}).clientWidth||340)-40)*.9)),"don-slot")+'<div class="don-center">'+center+'</div><button class="don-fab" data-act="movNuevo" data-v="'+donTipo+'" aria-label="Cargar '+(donTipo==="ingreso"?"un ingreso":"un gasto")+'">'+ico("plus",2.4)+"</button></div>";
- h+=parts.length?'<ul class="don-legend">'+parts.map((p,i)=>'<li><button data-act="donSel" data-i="'+i+'" class="'+(donSel===i?"on":"")+'"><i style="background:'+p.color+'"></i><span>'+esc(p.label)+(p.ahorro?' <small class="muted">· ahorro</small>':"")+'</span><b class="num">'+money(p.v)+'</b><em class="num">'+Math.round(p.v/total*100)+"%</em></button></li>").join("")+"</ul>":'<p class="empty" style="text-align:center">'+(donTipo==="ingreso"?"No hay ingresos cargados este mes.":"No hay gastos cargados este mes.")+"</p>";
+ h+=parts.length?'<ul class="don-legend">'+parts.map((p,i)=>'<li><button data-act="catVer" data-id="'+esc(p.id)+'" data-tipo="'+donTipo+'" data-i="'+i+'" class="'+(donSel===i?"on":"")+'"><i style="background:'+p.color+'"></i><span>'+esc(p.label)+(p.ahorro?' <small class="muted">· ahorro</small>':"")+'</span><b class="num">'+money(p.v)+'</b><em class="num">'+Math.round(p.v/total*100)+"%</em></button></li>").join("")+"</ul>":'<p class="empty" style="text-align:center">'+(donTipo==="ingreso"?"No hay ingresos cargados este mes.":"No hay gastos cargados este mes.")+"</p>";
  h+="</article>";
  return h;
 }
@@ -935,6 +935,31 @@ function fijoSheet(id){
 }
 window.CorchoFijosRender=()=>{try{renderFijos()}catch(e){}};
 
+
+/* ================= FINANZAS: detalle de una categoría en el mes ================= */
+function catDetail(id,tipo){
+ const f=FIN();if(!f)return;const d=f.data();const cfg=d.cfg;tipo=tipo==="ingreso"?"ingreso":"gasto";
+ const list=tipo==="ingreso"?(cfg.ingresos||[]):cfg.categorias;const c=list.find(x=>x.id===id)||{id,nombre:tipo==="ingreso"?"Otros ingresos":"Otros"};
+ const [yy,mm]=d.key.split("-").map(Number);const n=monthDays(d.key);const t=today();const cur=d.key===t.slice(0,7);
+ openSheet({title:c.nombre,html:()=>{
+  const dd=f.data();const its=(dd.items||[]).filter(it=>(tipo==="ingreso"?it.tipo==="ingreso":it.tipo!=="ingreso")&&(it.cat||"otros")===id).sort((a,b)=>b.fecha.localeCompare(a.fecha)||String(b.id).localeCompare(String(a.id)));
+  const tot=its.reduce((s,it)=>s+(+it.monto||0),0),lim=tipo==="gasto"?(+c.limite||0):0;const col=catColor(list,id);
+  const byDay=Array(n).fill(0);its.forEach(it=>{const k=+it.fecha.slice(8,10);if(k>=1&&k<=n)byDay[k-1]+=+it.monto||0});const mx=Math.max(1,...byDay);
+  const W=320,H=74,bw=W/n;let svg='<svg class="cd-bars" viewBox="0 0 '+W+" "+H+'" preserveAspectRatio="none" role="img" aria-label="'+(tipo==="ingreso"?"Ingresos":"Gastos")+' por día del mes">';
+  byDay.forEach((v,i)=>{const h=v?Math.max(3,(H-14)*v/mx):0;svg+='<rect x="'+(i*bw+bw*.18).toFixed(2)+'" y="'+(H-12-h).toFixed(2)+'" width="'+(bw*.64).toFixed(2)+'" height="'+h.toFixed(2)+'" rx="1.2" fill="'+col+'"'+(cur&&i+1>parseISO(t).getDate()?' opacity=".3"':"")+"/>"});
+  svg+='<line x1="0" x2="'+W+'" y1="'+(H-12)+'" y2="'+(H-12)+'" stroke="#26262B" stroke-width="1"/>';
+  [1,10,20,n].forEach(dd2=>{svg+='<text x="'+((dd2-.5)*bw).toFixed(1)+'" y="'+(H-2)+'" text-anchor="middle" class="cd-ax">'+dd2+"</text>"});svg+="</svg>";
+  let h='<p class="small muted" style="margin:-4px 0 12px">'+cap(MESES[mm-1])+" "+yy+" · "+(tipo==="ingreso"?"ingresos":"gastos")+"</p>";
+  h+='<div class="cd-top"><div><span class="eyebrow">Total</span><b class="num">'+money(tot)+'</b></div><div><span class="eyebrow">Movimientos</span><b class="num">'+its.length+'</b></div><div><span class="eyebrow">Promedio</span><b class="num">'+(its.length?money(tot/its.length):"—")+"</b></div></div>";
+  if(lim){const p=tot/lim;h+='<div class="cd-lim"><div class="tr-bar"><i style="width:'+Math.min(100,p*100).toFixed(1)+"%;background:"+(p>1?"var(--crit)":p>=.8?"var(--warn)":"var(--ink)")+'"></i></div><span class="small '+(p>1?"neg":"muted")+'">'+(p>1?"Te pasaste "+money(tot-lim)+" del límite de "+money(lim):"Te quedan "+money(lim-tot)+" de "+money(lim)+" ("+Math.round(p*100)+"% usado)")+"</span></div>"}
+  h+='<div class="cd-chart"><span class="eyebrow">Día por día</span>'+svg+"</div>";
+  if(!its.length)h+='<p class="empty">No hay '+(tipo==="ingreso"?"ingresos":"gastos")+" en esta categoría este mes.</p>";
+  else{let curD=null;h+='<ul class="cd-list">';its.forEach(it=>{if(it.fecha!==curD){curD=it.fecha;const sum=its.filter(x=>x.fecha===curD).reduce((s,x)=>s+(+x.monto||0),0);h+='<li class="cd-day"><span>'+cap(fmtDay(curD))+'</span><span class="num">'+money(sum)+"</span></li>"}
+   h+='<li><button class="cd-row" data-act="movEdit" data-id="'+esc(it.id)+'"><span class="cd-c">'+esc(it.concepto)+'<small>'+esc(nameIn(cfg.cuentas,it.cuenta)||"")+'</small></span><span class="num '+(tipo==="ingreso"?"pos":"")+'">'+(tipo==="ingreso"?"+":"−")+money(it.monto)+"</span></button></li>"});h+="</ul>"}
+  h+='<div class="sheet-actions" style="margin-top:14px">'+(tipo==="gasto"?'<button class="btn" data-act="catEdit" data-id="'+esc(id)+'">'+ico("ajustes")+" Editar categoría y límite</button>":"")+'<span class="grow"></span><button class="btn primary" data-act="close">Listo</button></div>';
+  return h}});
+}
+
 /* ================= render general ================= */
 const R={hoy:renderHoy,tareas:renderTareas,habitos:renderHabitos,enfoque:renderEnfoque,entreno:renderEntreno,estudio:renderEstudio,recordatorios:renderRecordatorios,ajustes:renderAjustes};
 let pending=false;
@@ -950,6 +975,7 @@ const ACT={
  fijoNuevo:()=>fijoSheet(),
  catsMgr:()=>catsSheet(),
  catEdit:b=>catSheet(b.dataset.id||null,b.dataset.from==="mgr"),
+ catVer:b=>{if(b.dataset.i!=null&&b.closest(".don-legend")){donSel=+b.dataset.i}catDetail(b.dataset.id,b.dataset.tipo||"gasto");if(b.closest(".don-legend"))renderFinDash()},
  donTipo:b=>{donTipo=b.dataset.v;donSel=null;renderFinDash()},
  donSel:b=>{const i=+b.dataset.i;donSel=donSel===i?null:i;renderFinDash()},
  donMes:b=>{const btn=$(+b.dataset.v<0?"#prevM":"#nextM");donSel=null;if(btn)btn.click()},
