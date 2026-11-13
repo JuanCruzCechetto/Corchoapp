@@ -12,7 +12,7 @@ const listeners=new Set();
 const S={available:!!cfg,ready:false,user:null,state:cfg?"cargando":"sin-config",lastSync:meta.last||null,error:null,
  onChange(fn){listeners.add(fn);return()=>listeners.delete(fn)},
  touch(k){if(!k||k.indexOf("corcho:")!==0)return;meta.ts[k]=Date.now();meta.dirty[k]=1;saveMeta();schedule()},
- signIn,signOut,syncNow,wipeRemote,chooseFirst:null};
+ signIn,signOut,syncNow,wipeRemote,gcalAuth,chooseFirst:null};
 window.CorchoSync=S;
 const emit=()=>listeners.forEach(fn=>{try{fn(S)}catch(e){}});
 if(!cfg)return;
@@ -30,6 +30,11 @@ loadScript(SDK+"firebase-app-compat.js").then(()=>Promise.all([loadScript(SDK+"f
 function authMsg(e){const c=e&&e.code||"";if(c.includes("unauthorized-domain"))return "Este dominio no está autorizado en Firebase. Agregalo en Authentication › Configuración › Dominios autorizados.";if(c.includes("popup-closed"))return "Cerraste la ventana de Google antes de terminar.";if(c.includes("network"))return "No hay conexión a internet.";return "No se pudo iniciar sesión ("+(c||e&&e.message||"error")+")."}
 function signIn(){if(!auth)return;const p=new fb.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});setState("conectando");
  auth.signInWithPopup(p).catch(e=>{const c=e&&e.code||"";if(c.includes("popup-blocked")||c.includes("operation-not-supported")||c.includes("web-storage-unsupported"))return auth.signInWithRedirect(p);setState(S.user?"ok":"desconectado",authMsg(e))})}
+/* Permiso para Google Calendar: vuelve a pedir la cuenta con los permisos del calendario y devuelve un token de una hora. */
+function gcalAuth(){if(!auth||!auth.currentUser)return Promise.reject({code:"login"});const p=new fb.auth.GoogleAuthProvider();
+ p.addScope("https://www.googleapis.com/auth/calendar.readonly");p.addScope("https://www.googleapis.com/auth/calendar.events");
+ p.setCustomParameters({login_hint:auth.currentUser.email||""});
+ return auth.currentUser.reauthenticateWithPopup(p).then(r=>{const t=r&&r.credential&&r.credential.accessToken;if(!t)throw new Error("Google no devolvió el permiso");return t})}
 function signOut(){if(!auth)return;auth.signOut()}
 const hasLocalData=()=>localKeys().some(k=>{const v=localStorage.getItem(k);return v&&v!=="[]"&&v!=="{}"&&v!=="null"});
 async function firstSync(){

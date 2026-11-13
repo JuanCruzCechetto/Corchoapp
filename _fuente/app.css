@@ -758,3 +758,32 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
 .cd-row:hover{background:var(--rule-2)}
 .cd-c{display:flex;flex-direction:column;min-width:0;overflow-wrap:anywhere}
 .cd-c small{font-size:12px;color:var(--ink-2)}
+
+/* ===== Google Calendar ===== */
+.gchip{position:relative;z-index:2;display:block;width:100%;text-align:left;border:1px solid var(--rule);border-left:3px solid var(--gc,#8E8E96);background:#141418;color:var(--ink);border-radius:7px;padding:4px 7px;font:inherit;font-size:12px;line-height:1.3;font-weight:500;cursor:pointer;overflow-wrap:anywhere}
+.gchip:hover{background:#1B1B20}
+.gchip .num{color:var(--ink-2);font-size:11px}
+.tm-t.tm-g{background:#141418;color:var(--ink);box-shadow:inset 3px 0 0 var(--gc,#8E8E96);padding-left:7px}
+@media (max-width:760px){.tm-t.tm-g{background:var(--gc,#8E8E96);box-shadow:none;padding:0}}
+.gc-st{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+.gc-st svg{flex:none}
+.group-h.gc-h{display:flex;align-items:center;gap:8px;padding-top:4px}
+.group-h.gc-h .gc-st{text-transform:none;letter-spacing:0;font-weight:500}
+.gc-list{margin-bottom:6px}
+.gc-row button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--ink);font:inherit;text-align:left;padding:9px 0;border-bottom:1px solid var(--rule);cursor:pointer}
+.gc-row:last-child button{border-bottom:0}
+.gc-row i{flex:none;width:4px;align-self:stretch;min-height:18px;border-radius:2px;background:var(--gc,#8E8E96)}
+.gc-row .num{flex:none;min-width:88px;font-size:12px;color:var(--ink-2)}
+.gc-row b{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gc-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--gc,#8E8E96);margin-right:8px;vertical-align:-1px;flex:none}
+.gc-det .gc-when{font-size:15px;font-weight:600;margin:0 0 6px}
+.gc-det p{margin:0 0 8px}
+.gc-desc{white-space:pre-wrap;color:var(--ink-2)}
+.gc-cals{display:flex;flex-direction:column;gap:2px}
+.gc-cal{display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;font-size:14px}
+.gc-cal input{width:18px;height:18px;accent-color:var(--ink);margin:0}
+.gc-cal .gc-dot{margin:0}
+.gc-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--rule);border-radius:10px;cursor:pointer;font-size:14px}
+.gc-opt input{width:18px;height:18px;accent-color:var(--ink);margin:0;flex:none}
+.gc-opt span{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap}
+.gc-opt small{font-size:12px}

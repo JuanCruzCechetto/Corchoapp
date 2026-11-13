@@ -910,6 +910,35 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
 .cd-c{display:flex;flex-direction:column;min-width:0;overflow-wrap:anywhere}
 .cd-c small{font-size:12px;color:var(--ink-2)}
 
+/* ===== Google Calendar ===== */
+.gchip{position:relative;z-index:2;display:block;width:100%;text-align:left;border:1px solid var(--rule);border-left:3px solid var(--gc,#8E8E96);background:#141418;color:var(--ink);border-radius:7px;padding:4px 7px;font:inherit;font-size:12px;line-height:1.3;font-weight:500;cursor:pointer;overflow-wrap:anywhere}
+.gchip:hover{background:#1B1B20}
+.gchip .num{color:var(--ink-2);font-size:11px}
+.tm-t.tm-g{background:#141418;color:var(--ink);box-shadow:inset 3px 0 0 var(--gc,#8E8E96);padding-left:7px}
+@media (max-width:760px){.tm-t.tm-g{background:var(--gc,#8E8E96);box-shadow:none;padding:0}}
+.gc-st{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+.gc-st svg{flex:none}
+.group-h.gc-h{display:flex;align-items:center;gap:8px;padding-top:4px}
+.group-h.gc-h .gc-st{text-transform:none;letter-spacing:0;font-weight:500}
+.gc-list{margin-bottom:6px}
+.gc-row button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--ink);font:inherit;text-align:left;padding:9px 0;border-bottom:1px solid var(--rule);cursor:pointer}
+.gc-row:last-child button{border-bottom:0}
+.gc-row i{flex:none;width:4px;align-self:stretch;min-height:18px;border-radius:2px;background:var(--gc,#8E8E96)}
+.gc-row .num{flex:none;min-width:88px;font-size:12px;color:var(--ink-2)}
+.gc-row b{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gc-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--gc,#8E8E96);margin-right:8px;vertical-align:-1px;flex:none}
+.gc-det .gc-when{font-size:15px;font-weight:600;margin:0 0 6px}
+.gc-det p{margin:0 0 8px}
+.gc-desc{white-space:pre-wrap;color:var(--ink-2)}
+.gc-cals{display:flex;flex-direction:column;gap:2px}
+.gc-cal{display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;font-size:14px}
+.gc-cal input{width:18px;height:18px;accent-color:var(--ink);margin:0}
+.gc-cal .gc-dot{margin:0}
+.gc-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--rule);border-radius:10px;cursor:pointer;font-size:14px}
+.gc-opt input{width:18px;height:18px;accent-color:var(--ink);margin:0;flex:none}
+.gc-opt span{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap}
+.gc-opt small{font-size:12px}
+
 </style>
 </head>
 <body>
@@ -1049,7 +1078,7 @@ const listeners=new Set();
 const S={available:!!cfg,ready:false,user:null,state:cfg?"cargando":"sin-config",lastSync:meta.last||null,error:null,
  onChange(fn){listeners.add(fn);return()=>listeners.delete(fn)},
  touch(k){if(!k||k.indexOf("corcho:")!==0)return;meta.ts[k]=Date.now();meta.dirty[k]=1;saveMeta();schedule()},
- signIn,signOut,syncNow,wipeRemote,chooseFirst:null};
+ signIn,signOut,syncNow,wipeRemote,gcalAuth,chooseFirst:null};
 window.CorchoSync=S;
 const emit=()=>listeners.forEach(fn=>{try{fn(S)}catch(e){}});
 if(!cfg)return;
@@ -1067,6 +1096,11 @@ loadScript(SDK+"firebase-app-compat.js").then(()=>Promise.all([loadScript(SDK+"f
 function authMsg(e){const c=e&&e.code||"";if(c.includes("unauthorized-domain"))return "Este dominio no está autorizado en Firebase. Agregalo en Authentication › Configuración › Dominios autorizados.";if(c.includes("popup-closed"))return "Cerraste la ventana de Google antes de terminar.";if(c.includes("network"))return "No hay conexión a internet.";return "No se pudo iniciar sesión ("+(c||e&&e.message||"error")+")."}
 function signIn(){if(!auth)return;const p=new fb.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});setState("conectando");
  auth.signInWithPopup(p).catch(e=>{const c=e&&e.code||"";if(c.includes("popup-blocked")||c.includes("operation-not-supported")||c.includes("web-storage-unsupported"))return auth.signInWithRedirect(p);setState(S.user?"ok":"desconectado",authMsg(e))})}
+/* Permiso para Google Calendar: vuelve a pedir la cuenta con los permisos del calendario y devuelve un token de una hora. */
+function gcalAuth(){if(!auth||!auth.currentUser)return Promise.reject({code:"login"});const p=new fb.auth.GoogleAuthProvider();
+ p.addScope("https://www.googleapis.com/auth/calendar.readonly");p.addScope("https://www.googleapis.com/auth/calendar.events");
+ p.setCustomParameters({login_hint:auth.currentUser.email||""});
+ return auth.currentUser.reauthenticateWithPopup(p).then(r=>{const t=r&&r.credential&&r.credential.accessToken;if(!t)throw new Error("Google no devolvió el permiso");return t})}
 function signOut(){if(!auth)return;auth.signOut()}
 const hasLocalData=()=>localKeys().some(k=>{const v=localStorage.getItem(k);return v&&v!=="[]"&&v!=="{}"&&v!=="null"});
 async function firstSync(){
@@ -1898,13 +1932,13 @@ function taskSheet(id,preset){
   '<div class="frow"><div class="field"><label for="f-due">Fecha</label><input type="date" id="f-due" name="due" value="'+(x.due||"")+'"></div><div class="field"><label for="f-time">Hora</label><input type="time" id="f-time" name="time" value="'+(x.time||"")+'"></div></div>'+
   '<div class="field"><span class="flabel">Prioridad</span><div class="chips">'+[[1,"Alta"],[2,"Media"],[3,"Baja"]].map(([v,l])=>'<label><input type="radio" name="prio" value="'+v+'"'+((x.prio||3)==v?" checked":"")+"><span>"+l+"</span></label>").join("")+"</div></div>"+
   '<div class="field"><label for="f-area">Área o proyecto</label><input id="f-area" name="area" list="areasList" value="'+esc(x.area)+'" placeholder="Trabajo, Casa, Facultad…"><datalist id="areasList">'+areas.map(a=>'<option value="'+esc(a)+'">').join("")+"</datalist></div>"+
-  '<p class="small muted" style="margin:0">Si le ponés fecha y hora, te aviso a ese horario.</p>'+
+  '<p class="small muted" style="margin:0">Si le ponés fecha y hora, te aviso a ese horario.</p>'+gcField("tarea",x,!id," · necesita fecha")+
   '<div class="sheet-actions">'+(id?delBtn("tarea",id):"")+'<span class="grow"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Guardar</button></div></form>',
   forms:{sfTask(fd){
    const o={title:String(fd.get("title")).trim(),notes:String(fd.get("notes")||"").trim(),due:fd.get("due")||"",time:fd.get("time")||"",prio:+fd.get("prio")||3,area:String(fd.get("area")||"").trim()};
    if(!o.title)return;
-   if(id){if(o.due!==x.due||o.time!==x.time)x.avisado=false;Object.assign(x,o)}else D.tareas.push(Object.assign({id:uid(),done:false,created:today()},o));
-   put("tareas");closeSheet();toast(id?"Tarea guardada":"Tarea creada");
+   let nid=id;if(id){if(o.due!==x.due||o.time!==x.time)x.avisado=false;Object.assign(x,o)}else{nid=uid();D.tareas.push(Object.assign({id:nid,done:false,created:today()},o))}
+   put("tareas");closeSheet();toast(id?"Tarea guardada":"Tarea creada");gcAfterSave("tarea",nid,fd,!id);
   }}});
 }
 
@@ -2192,9 +2226,9 @@ function renderRecordatorios(){
 }
 function remSheet(id){
  const r=id?D.rec.find(x=>x.id===id):(()=>{const d=new Date(Date.now()+3600e3);d.setMinutes(0,0,0);return {titulo:"",at:localDT(d),rep:"no"}})();if(!r)return;
- openSheet({title:id?"Editar recordatorio":"Nuevo recordatorio",html:()=>'<form class="form" id="sfRem" autocomplete="off"><div class="field"><label for="re-t">Recordarme</label><input id="re-t" name="titulo" required maxlength="140" value="'+esc(r.titulo)+'" autofocus></div><div class="frow"><div class="field"><label for="re-d">Fecha</label><input type="date" id="re-d" name="d" required value="'+r.at.slice(0,10)+'"></div><div class="field"><label for="re-h">Hora</label><input type="time" id="re-h" name="h" required value="'+r.at.slice(11,16)+'"></div></div><div class="field"><span class="flabel">Repetir</span><div class="chips">'+Object.entries(REP).map(([k,l])=>'<label><input type="radio" name="rep" value="'+k+'"'+(r.rep===k?" checked":"")+"><span>"+l+"</span></label>").join("")+'</div></div><div class="sheet-actions">'+(id?delBtn("rec",id):"")+'<span class="grow"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Guardar</button></div></form>',
+ openSheet({title:id?"Editar recordatorio":"Nuevo recordatorio",html:()=>'<form class="form" id="sfRem" autocomplete="off"><div class="field"><label for="re-t">Recordarme</label><input id="re-t" name="titulo" required maxlength="140" value="'+esc(r.titulo)+'" autofocus></div><div class="frow"><div class="field"><label for="re-d">Fecha</label><input type="date" id="re-d" name="d" required value="'+r.at.slice(0,10)+'"></div><div class="field"><label for="re-h">Hora</label><input type="time" id="re-h" name="h" required value="'+r.at.slice(11,16)+'"></div></div><div class="field"><span class="flabel">Repetir</span><div class="chips">'+Object.entries(REP).map(([k,l])=>'<label><input type="radio" name="rep" value="'+k+'"'+(r.rep===k?" checked":"")+"><span>"+l+"</span></label>").join("")+'</div></div>'+gcField("rec",r,!id)+'<div class="sheet-actions">'+(id?delBtn("rec",id):"")+'<span class="grow"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Guardar</button></div></form>',
  forms:{sfRem(fd){const o={titulo:String(fd.get("titulo")).trim(),at:fd.get("d")+"T"+fd.get("h"),rep:fd.get("rep")||"no"};if(!o.titulo||!fd.get("d")||!fd.get("h"))return;o.avisado=new Date(o.at).getTime()<=Date.now()&&o.rep==="no"?(id?r.avisado:false):false;
-  if(id)Object.assign(r,o,{hecho:false});else D.rec.push(Object.assign({id:uid(),hecho:false},o));put("rec");closeSheet();checkRem();toast("Recordatorio guardado");if(D.cfg.notif===false&&canNotify()&&Notification.permission==="default")setTimeout(()=>toast("Tip: activá las notificaciones en Recordatorios para recibir el aviso."),4200)}}});
+  let nid=id;if(id)Object.assign(r,o,{hecho:false});else{nid=uid();D.rec.push(Object.assign({id:nid,hecho:false},o))}put("rec");closeSheet();checkRem();toast("Recordatorio guardado");gcAfterSave("rec",nid,fd,!id);if(D.cfg.notif===false&&canNotify()&&Notification.permission==="default")setTimeout(()=>toast("Tip: activá las notificaciones en Recordatorios para recibir el aviso."),4200)}}});
 }
 function checkRem(){
  const now=Date.now();let ch=false,chT=false;
@@ -2218,7 +2252,7 @@ function renderAjustes(){
  const c=D.cfg;
  const SY=window.CorchoSync;let h=vhead("Ajustes",SY&&SY.user?"Tus datos se sincronizan con tu cuenta de Google":"Corcho App guarda todo en este dispositivo");
  h+='<div class="board">';
- h+=syncCard();
+ h+=syncCard();h+=gcCard();
  h+=card("ajustes","Perfil","",'<div class="field"><label for="a-nombre">Tu nombre</label><input id="a-nombre" data-cfg="nombre" value="'+esc(c.nombre)+'" placeholder="Para el saludo de Hoy" maxlength="40"></div>');
  h+=card("ajustes","Metas semanales","",'<div class="frow"><div class="field"><label for="a-me">Entrenos por semana</label><input type="number" id="a-me" data-cfg="metaEntrenos" data-n="1" min="1" max="14" value="'+c.metaEntrenos+'"></div><div class="field"><label for="a-ms">Horas de estudio</label><input type="number" id="a-ms" data-cfg="metaEstudio" data-n="1" min="0" max="80" value="'+c.metaEstudio+'"></div></div>');
  h+=notifCard();
@@ -2283,8 +2317,10 @@ function renderHoy(){
  h+='<div class="dash">';
  // tareas
  const tl=pend.slice(0,5).concat(doneT.slice(0,Math.max(0,5-pend.length)));
+ const gev=(gcMap([t])[t]||[]);
  h+=dcard("d-tareas","tareas","Tareas",tot?doneT.length+" de "+tot+" hoy":"Nada para hoy",tot?ring(doneT.length/tot):"",
-  tl.length?'<ul class="list">'+tl.map(taskRow).join("")+"</ul>":'<p class="empty">No tenés tareas para hoy.</p>',
+  (gev.length?'<div class="group-h gc-h">Agenda'+gcStatus()+'</div><ul class="list gc-list">'+gev.slice(0,5).map(gcRow).join("")+"</ul>"+(gev.length>5?'<button class="linkbtn small" data-go="tareas">+'+(gev.length-5)+" eventos más</button>":"")+(tl.length?'<div class="group-h">Tareas</div>':""):"")+
+  (tl.length?'<ul class="list">'+tl.map(taskRow).join("")+"</ul>":gev.length?"":'<p class="empty">No tenés tareas para hoy.</p>'),
   '<button class="linkbtn" data-act="tNew">+ Nueva tarea</button><span class="grow"></span><button class="linkbtn" data-go="tareas">Ver todo →</button>');
  // saldo
  const f=FIN();let fd=null;try{fd=f&&f.data()}catch(e){}
@@ -2306,7 +2342,7 @@ function renderHoy(){
   pp.length?'<div class="plist">'+pp.slice(0,4).map(p=>'<div class="prow"><div><b>'+esc(p.desc)+'</b><span class="small '+(p.fecha<t?"neg":"muted")+'">'+(p.fecha<t?"Vencido · ":"Vence ")+fmtDay(p.fecha).toLowerCase()+'</span></div><span class="num neg">−'+money(p.monto)+"</span></div>").join("")+"</div>":'<p class="empty">Cargá tus cuentas a pagar y tarjetas para ver los vencimientos acá.</p>',
   '<button class="linkbtn" data-act="pNuevo">+ Nuevo pago</button><span class="grow"></span><button class="linkbtn" data-act="goPagos">Ver por pagar →</button>');
  h+="</div>";
- $("#v-hoy").innerHTML=h;drawCharts($("#v-hoy"));
+ $("#v-hoy").innerHTML=h;drawCharts($("#v-hoy"));gcEnsure([t.slice(0,7)]);
 }
 
 /* ================= HÁBITOS (semanas, barras y mapa) ================= */
@@ -2372,20 +2408,22 @@ function renderTareas(){
  if(v==="dia"){days=[sel];label=cap(longDate(sel))}
  else if(v==="semana"){const ws=weekStart(sel);days=Array.from({length:7},(_,i)=>addDays(ws,i));const a=parseISO(days[0]),b=parseISO(days[6]);label=a.getDate()+" "+MC[a.getMonth()]+" – "+b.getDate()+" "+MC[b.getMonth()]+" "+b.getFullYear()}
  else{const d=parseISO(sel);label=cap(MESES[d.getMonth()])+" "+d.getFullYear()}
- const tool='<div class="tc-tool"><div class="day-nav"><button class="iconbtn" data-act="tNav" data-v="-1" aria-label="Anterior">‹</button><button class="btn sm" data-act="tNav" data-v="0">Hoy</button><button class="iconbtn" data-act="tNav" data-v="1" aria-label="Siguiente">›</button></div><b class="tc-label">'+label+"</b></div>";
+ const tool='<div class="tc-tool"><div class="day-nav"><button class="iconbtn" data-act="tNav" data-v="-1" aria-label="Anterior">‹</button><button class="btn sm" data-act="tNav" data-v="0">Hoy</button><button class="iconbtn" data-act="tNav" data-v="1" aria-label="Siguiente">›</button></div><b class="tc-label">'+label+"</b>"+gcStatus()+"</div>";
  let cal="";
  if(v==="mes")cal=tMonthHTML(sel.slice(0,7));
  else{
   const by={};D.tareas.forEach(x=>{if(x.due&&days.includes(x.due))(by[x.due]=by[x.due]||[]).push(x)});
+  const gm=gcMap(days);
   const now=new Date();
   cal='<div class="tg-scroll" data-tv="'+v+'"><div class="tg" style="--cols:'+days.length+'"><div class="tg-corner"></div>'+days.map(d=>'<button class="tg-dh'+(d===t?" today":"")+'" data-act="tPick" data-v="'+d+'"><span>'+DC[wd(d)]+"</span><b>"+parseISO(d).getDate()+"</b></button>").join("");
-  cal+='<div class="tg-time tg-ad">Sin hora</div>'+days.map(d=>'<div class="tg-cell tg-allday" data-act="tSlot" data-v="'+d+'">'+(by[d]||[]).filter(x=>!x.time).sort(taskSort).map(chipT).join("")+"</div>").join("");
-  for(let hr=0;hr<24;hr++){cal+='<div class="tg-time" data-h="'+hr+'">'+pad2(hr)+":00</div>"+days.map(d=>{const it=(by[d]||[]).filter(x=>x.time&&+x.time.slice(0,2)===hr).sort(taskSort);const nl=d===t&&now.getHours()===hr?'<i class="tg-now" style="top:'+(now.getMinutes()/60*100).toFixed(1)+'%" aria-hidden="true"></i>':"";return '<div class="tg-cell" data-act="tSlot" data-v="'+d+'" data-h="'+pad2(hr)+':00">'+nl+it.map(chipT).join("")+"</div>"}).join("")}
+  cal+='<div class="tg-time tg-ad">Sin hora</div>'+days.map(d=>'<div class="tg-cell tg-allday" data-act="tSlot" data-v="'+d+'">'+(gm[d]||[]).filter(e=>e.ad).map(e=>gcChip(e,d)).join("")+(by[d]||[]).filter(x=>!x.time).sort(taskSort).map(chipT).join("")+"</div>").join("");
+  for(let hr=0;hr<24;hr++){cal+='<div class="tg-time" data-h="'+hr+'">'+pad2(hr)+":00</div>"+days.map(d=>{const it=(by[d]||[]).filter(x=>x.time&&+x.time.slice(0,2)===hr).sort(taskSort);const nl=d===t&&now.getHours()===hr?'<i class="tg-now" style="top:'+(now.getMinutes()/60*100).toFixed(1)+'%" aria-hidden="true"></i>':"";const ge=(gm[d]||[]).filter(e=>!e.ad&&e.date===d&&+e.time.slice(0,2)===hr);return '<div class="tg-cell" data-act="tSlot" data-v="'+d+'" data-h="'+pad2(hr)+':00">'+nl+ge.map(e=>gcChip(e,d)).join("")+it.map(chipT).join("")+"</div>"}).join("")}
   cal+="</div></div>";
  }
  // panel lateral
  const sinF=D.tareas.filter(x=>!x.done&&!x.due),late=D.tareas.filter(x=>!x.done&&x.due&&x.due<t).sort(taskSort);
  const marks={};D.tareas.forEach(x=>{if(!x.done&&x.due)marks[x.due]=(marks[x.due]||0)+1});
+ {const mk=(tMini||sel.slice(0,7)),f0=mk+"-01",dl=Array.from({length:monthDays(mk)},(_,i)=>addDays(f0,i)),gmm=gcMap(dl);Object.keys(gmm).forEach(d=>{marks[d]=(marks[d]||0)+gmm[d].length})}
  const list=tPanel==="atrasadas"?late:sinF;
  let side=miniCal(tMini||sel.slice(0,7),{act:"tPick",nav:"tMiniNav",sel,marks,what:"tareas"});
  side+='<div class="seg tp-seg"><button data-act="tPanel" data-v="sinfecha" aria-selected="'+(tPanel!=="atrasadas")+'">Sin fecha · '+sinF.length+'</button><button data-act="tPanel" data-v="atrasadas" aria-selected="'+(tPanel==="atrasadas")+'">Atrasadas · '+late.length+"</button></div>";
@@ -2393,17 +2431,154 @@ function renderTareas(){
  side+=list.length?'<ul class="list tp-list">'+list.slice(0,30).map(taskRow).join("")+"</ul>":'<p class="empty">'+(tPanel==="atrasadas"?"No tenés tareas atrasadas.":"No hay tareas sin fecha.")+"</p>";
  h+='<div class="tcal"><div class="card tc-main">'+tool+cal+'</div><aside class="card tc-side">'+side+"</aside></div>";
  $("#v-tareas").innerHTML=h;
+ gcEnsure(gcMonthsNow().concat([(tMini||sel.slice(0,7))]));
  const sc=$("#v-tareas .tg-scroll");
  if(sc){const hd0=sc.querySelector(".tg-dh");if(hd0)sc.style.setProperty("--hdh",hd0.offsetHeight+"px");if(keep.v===v&&keep.top!=null){sc.scrollTop=keep.top;sc.scrollLeft=keep.left||0}else{const hr=days.includes(t)?Math.max(0,new Date().getHours()-1):7;const r=sc.querySelector('.tg-time[data-h="'+hr+'"]');const hd=sc.querySelector(".tg-dh");if(r)sc.scrollTop=r.offsetTop-(hd?hd.offsetHeight:0)}}
 }
 function tMonthHTML(k){
  const first=k+"-01",start=addDays(first,-((wd(first)+6)%7)),t=today();
  const by={};D.tareas.forEach(x=>{if(x.due)(by[x.due]=by[x.due]||[]).push(x)});
+ const cells=[];for(let i=0;i<42;i++)cells.push(addDays(start,i));const gm=gcMap(cells);
  let h='<div class="tm"><div class="tm-g">'+["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].map(d=>'<span class="tm-wd">'+d+"</span>").join("");
- for(let i=0;i<42;i++){const d=addDays(start,i);if(i>=35&&d.slice(0,7)!==k)break;const L=(by[d]||[]).sort(taskSort);
-  h+='<button class="tm-cell'+(d.slice(0,7)!==k?" other":"")+(d===t?" today":"")+'" data-act="tPickDay" data-v="'+d+'" aria-label="'+longDate(d)+(L.length?", "+L.length+" tareas":"")+'"><span class="tm-d">'+parseISO(d).getDate()+"</span>"+L.slice(0,3).map(x=>'<span class="tm-t'+(x.done?" done":"")+'">'+(x.time?x.time+" ":"")+esc(x.title)+"</span>").join("")+(L.length>3?'<span class="tm-more">+'+(L.length-3)+" más</span>":"")+"</button>"}
+ for(let i=0;i<42;i++){const d=addDays(start,i);if(i>=35&&d.slice(0,7)!==k)break;const L=(by[d]||[]).sort(taskSort),G=gm[d]||[],nT=L.length+G.length,shown=G.slice(0,3).map(e=>'<span class="tm-t tm-g" style="--gc:'+esc(e.color)+'">'+(e.ad?"":e.time+" ")+esc(e.title)+"</span>").concat(L.slice(0,Math.max(0,3-G.length)).map(x=>'<span class="tm-t'+(x.done?" done":"")+'">'+(x.time?x.time+" ":"")+esc(x.title)+"</span>"));
+  h+='<button class="tm-cell'+(d.slice(0,7)!==k?" other":"")+(d===t?" today":"")+'" data-act="tPickDay" data-v="'+d+'" aria-label="'+longDate(d)+(L.length?", "+L.length+" tareas":"")+(G.length?", "+G.length+" eventos":"")+'"><span class="tm-d">'+parseISO(d).getDate()+"</span>"+shown.join("")+(nT>3?'<span class="tm-more">+'+(nT-3)+" más</span>":"")+"</button>"}
  return h+"</div></div>";
 }
+
+/* ================= GOOGLE CALENDAR ================= */
+/* Por dispositivo (no se sincroniza): permiso de una hora, calendarios elegidos y copia de los eventos.
+   En las tareas, recordatorios y pagos se guarda x.gcal={id,cal} para no duplicar el evento en otro dispositivo. */
+const GCK="corcho-gcal";
+let gc=(()=>{try{return JSON.parse(localStorage.getItem(GCK)||"{}")||{}}catch(e){return {}}})();
+gc.cache=gc.cache||{};gc.queue=gc.queue||[];gc.def=gc.def||{};
+const gcSave=()=>{try{localStorage.setItem(GCK,JSON.stringify(gc))}catch(e){}};
+const gcOn=()=>!!gc.on;
+const gcTokOk=()=>!!gc.tok&&gc.exp>Date.now()+60e3;
+const gcBusy={};let gcErrShown=0;
+const GC_IC='<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="15" r="2.2" fill="#4285F4"/></svg>';
+const encC=encodeURIComponent;
+function gcErrTxt(e){const m=String(e&&e.message||e||"");
+ if(e&&e.code==="login")return "Primero iniciá sesión con Google en Ajustes › Sincronización.";
+ if(/has not been used|is disabled|accessNotConfigured/i.test(m))return "Falta habilitar la API de Google Calendar en tu proyecto de Firebase (paso 1 de la guía).";
+ if(/insufficient|scope/i.test(m))return "Google no dio permiso para el calendario. Volvé a conectar y marcá las casillas de Calendar.";
+ if(/popup-closed|cancelled-popup/i.test(m)||(e&&/popup-closed|cancelled-popup/.test(e.code||"")))return "Cerraste la ventana de Google antes de terminar.";
+ if(/popup-blocked/.test(e&&e.code||""))return "El navegador bloqueó la ventana de Google. Permití las ventanas emergentes y probá de nuevo.";
+ if(/user-mismatch/.test(e&&e.code||""))return "Elegí la misma cuenta de Google con la que sincronizás Corcho.";
+ if(navigator.onLine===false||/network|Failed to fetch/i.test(m))return "No hay conexión a internet.";
+ return "Google Calendar: "+m}
+function gcFail(e){if(e&&e.code==="token"){render();return}gc.err=gcErrTxt(e);gcSave();if(Date.now()-gcErrShown>8000){gcErrShown=Date.now();toast(gc.err)}}
+/* Pide permiso. Tiene que llamarse directo desde un toque (abre la ventana de Google). */
+function gcAuth(){const S=window.CorchoSync;
+ if(!S||!S.user||!S.gcalAuth)return Promise.reject({code:"login"});
+ return S.gcalAuth().then(tok=>{gc.on=true;gc.tok=tok;gc.exp=Date.now()+55*60e3;gc.err=null;gc.email=S.user.email||"";gcSave();return tok})}
+async function gcApi(path,opt){
+ if(!gcTokOk())throw {code:"token"};
+ opt=opt||{};const h={Authorization:"Bearer "+gc.tok};if(opt.body)h["Content-Type"]="application/json";
+ const r=await fetch("https://www.googleapis.com/calendar/v3/"+path,{method:opt.method||"GET",headers:h,body:opt.body});
+ if(r.status===401){gc.tok=null;gc.exp=0;gcSave();throw {code:"token"}}
+ if(r.status===204)return null;
+ const j=await r.json().catch(()=>null);
+ if(!r.ok){const er=new Error(j&&j.error&&j.error.message||("HTTP "+r.status));er.code=r.status;throw er}
+ return j}
+async function gcLoadCals(){
+ const j=await gcApi("users/me/calendarList?maxResults=250");const old={};(gc.cals||[]).forEach(c=>old[c.id]=c.on);
+ gc.cals=(j.items||[]).filter(c=>!c.deleted).map(c=>({id:c.id,name:c.summaryOverride||c.summary||c.id,color:c.backgroundColor||"#8E8E96",primary:!!c.primary,w:c.accessRole==="owner"||c.accessRole==="writer",on:c.id in old?old[c.id]:(!!c.primary||c.selected===true)}))
+  .sort((a,b)=>(b.primary-a.primary)||a.name.localeCompare(b.name));
+ if(!gc.wcal||!gc.cals.some(c=>c.id===gc.wcal&&c.w)){const p=gc.cals.find(c=>c.primary);gc.wcal=p?p.id:"primary"}
+ gcSave()}
+function gcNorm(e,c){const ad=!!(e.start&&e.start.date);let date,time="",end="",last;
+ if(ad){date=e.start.date;last=e.end&&e.end.date?addDays(e.end.date,-1):date;if(last<date)last=date}
+ else{const s=new Date(e.start.dateTime),f=new Date(e.end&&e.end.dateTime||e.start.dateTime);date=isoOf(s);last=date;time=pad2(s.getHours())+":"+pad2(s.getMinutes());end=pad2(f.getHours())+":"+pad2(f.getMinutes());if(isoOf(f)!==date)end+=" ("+fmtDay(isoOf(f)).toLowerCase()+")"}
+ return {id:e.id,cal:c.id,calName:c.name,color:c.color,title:e.summary||"(Sin título)",date,last,time,end,ad,loc:e.location||"",desc:String(e.description||"").replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]+>/g,"").slice(0,600),link:e.htmlLink||""}}
+async function gcFetchMonth(k){
+ if(!gc.cals)await gcLoadCals();
+ const [y,m]=k.split("-").map(Number);const a=new Date(y,m-1,1),b=new Date(y,m,1);const ev=[];
+ await Promise.all(gc.cals.filter(c=>c.on).map(async c=>{let pt="";do{
+  const j=await gcApi("calendars/"+encC(c.id)+"/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin="+encC(a.toISOString())+"&timeMax="+encC(b.toISOString())+(pt?"&pageToken="+encC(pt):""));
+  (j.items||[]).forEach(e=>{if(e.status==="cancelled")return;const pv=e.extendedProperties&&e.extendedProperties.private;if(pv&&pv.corcho)return;ev.push(gcNorm(e,c))});pt=j.nextPageToken}while(pt)}));
+ gc.cache[k]={ts:Date.now(),ev};
+ const ks=Object.keys(gc.cache).sort((p,q)=>gc.cache[q].ts-gc.cache[p].ts);ks.slice(8).forEach(x=>delete gc.cache[x]);
+ gc.err=null;gc.last=Date.now();gcSave()}
+/* Trae los meses que hagan falta (si hay permiso vigente) y vuelve a dibujar. */
+function gcEnsure(months,force){
+ if(!gcOn()||!gcTokOk())return;
+ const need=[...new Set(months)].filter(k=>!gcBusy[k]&&(force||!gc.cache[k]||Date.now()-gc.cache[k].ts>10*60e3));
+ if(!need.length)return;
+ need.forEach(k=>gcBusy[k]=1);
+ gcFlushQueue();
+ Promise.all(need.map(k=>gcFetchMonth(k))).then(()=>{need.forEach(k=>delete gcBusy[k]);if(!SH&&(view==="hoy"||view==="tareas"||view==="ajustes"))safeRender()},e=>{need.forEach(k=>delete gcBusy[k]);gcFail(e)})}
+function gcMap(days){const by={};if(!gcOn())return by;const set=new Set(days);const seen={};
+ [...new Set(days.map(d=>d.slice(0,7)))].forEach(k=>{const c=gc.cache[k];if(!c)return;c.ev.forEach(e=>{let d=e.date<days[0]?days[0]:e.date;for(let i=0;i<62&&d<=e.last;i++,d=addDays(d,1)){if(!set.has(d))continue;const key=e.id+"|"+d;if(seen[key])continue;seen[key]=1;(by[d]=by[d]||[]).push(e)}})});
+ Object.values(by).forEach(L=>L.sort((a,b)=>(a.ad?"":a.time||"").localeCompare(b.ad?"":b.time||"")));return by}
+function gcMonthsNow(){const t=today();if(view!=="tareas")return [t.slice(0,7)];const s=tD||t,w=weekStart(s);return [s.slice(0,7),w.slice(0,7),addDays(w,6).slice(0,7),t.slice(0,7)]}
+function gcFind(id){for(const k in gc.cache){const e=gc.cache[k].ev.find(x=>x.id===id);if(e)return e}return null}
+function gcStatus(){if(!gcOn())return "";const busy=Object.keys(gcBusy).length;
+ if(busy)return '<span class="gc-st small muted">'+GC_IC+" Actualizando…</span>";
+ if(!gcTokOk())return '<button class="gc-st btn sm" data-act="gcRefresh" title="Traer los cambios de Google Calendar">'+GC_IC+" Actualizar</button>";
+ return '<button class="gc-st linkbtn small" data-act="gcRefresh" title="Volver a traer los eventos">'+GC_IC+" Al día</button>"}
+function gcChip(e,d){const tm=e.ad?"":e.time;return '<button class="gchip" data-act="gcEv" data-id="'+esc(e.id)+'" style="--gc:'+esc(e.color)+'" title="'+esc(e.calName)+'">'+(tm?'<span class="num">'+tm+"</span> ":"")+esc(e.title)+"</button>"}
+function gcRow(e){return '<li class="gc-row"><button data-act="gcEv" data-id="'+esc(e.id)+'" style="--gc:'+esc(e.color)+'"><i aria-hidden="true"></i><span class="num">'+(e.ad?"Todo el día":e.time)+"</span><b>"+esc(e.title)+"</b></button></li>"}
+function gcEvSheet(id){const e=gcFind(id);if(!e)return;
+ const when=e.ad?(e.last!==e.date?cap(longDate(e.date))+" al "+longDate(e.last):cap(longDate(e.date))+" · todo el día"):cap(longDate(e.date))+" · "+e.time+" a "+e.end;
+ openSheet({title:e.title,html:()=>'<div class="gc-det"><p class="gc-when">'+esc(when)+'</p><p class="small"><span class="gc-dot" style="--gc:'+esc(e.color)+'"></span>'+esc(e.calName)+"</p>"+(e.loc?'<p class="small"><span class="muted">Lugar:</span> '+esc(e.loc)+"</p>":"")+(e.desc?'<p class="small gc-desc">'+esc(e.desc)+"</p>":"")+'<p class="small muted">Este evento es de tu Google Calendar. Para cambiarlo, abrilo ahí.</p><div class="sheet-actions"><button type="button" class="btn" data-act="gcToTask" data-id="'+esc(e.id)+'">Crear tarea con esto</button><span class="grow"></span>'+(e.link?'<a class="btn primary" href="'+esc(e.link)+'" target="_blank" rel="noopener">Abrir en Google Calendar</a>':"")+"</div></div>"})}
+/* ---- enviar a Google Calendar ---- */
+const GC_KIND={tarea:{list:()=>D.tareas,key:"tareas"},rec:{list:()=>D.rec,key:"rec"},pago:{list:()=>D.pagos.items,key:"pagos"}};
+const gcItem=(kind,id)=>GC_KIND[kind].list().find(x=>x.id===id);
+function localISO(d){return isoOf(d)+"T"+pad2(d.getHours())+":"+pad2(d.getMinutes())+":00"}
+function gcBody(kind,x){
+ const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"America/Argentina/Buenos_Aires";
+ const b={extendedProperties:{private:{corcho:kind}}};
+ const timed=(s,min)=>{const e=new Date(s.getTime()+min*60e3);b.start={dateTime:localISO(s),timeZone:tz};b.end={dateTime:localISO(e),timeZone:tz}};
+ const allDay=d=>{b.start={date:d};b.end={date:addDays(d,1)}};
+ if(kind==="tarea"){if(!x.due)return null;b.summary=(x.done?"✓ ":"")+x.title;b.description=(x.notes?x.notes+"\n\n":"")+"Tarea de Corcho App";if(x.time)timed(new Date(x.due+"T"+x.time),30);else allDay(x.due);b.reminders={useDefault:!!x.time}}
+ else if(kind==="rec"){b.summary=x.titulo;b.description="Recordatorio de Corcho App";timed(new Date(x.at),15);b.reminders={useDefault:false,overrides:[{method:"popup",minutes:0}]};const R={diario:"DAILY",semanal:"WEEKLY",mensual:"MONTHLY"}[x.rep];if(R)b.recurrence=["RRULE:FREQ="+R]}
+ else if(kind==="pago"){if(x.pagado||!x.fecha)return null;b.summary="Vence: "+x.desc+((+x.monto||0)>0?" · "+money(x.monto):"");b.description="Pago de Corcho App"+(x.forma==="mensual"?" (todos los meses)":"");allDay(x.fecha);b.reminders={useDefault:false,overrides:[{method:"popup",minutes:15*60}]}}
+ return b}
+/* want=true: crear o actualizar el evento. want=false: borrarlo. */
+async function gcPush(kind,id,want){
+ const x=gcItem(kind,id);if(!x)return;
+ if(!gcTokOk()){gcQueue({kind,id,want});return}
+ try{
+  const body=want?gcBody(kind,x):null;
+  if(!body){if(x.gcal){await gcApi("calendars/"+encC(x.gcal.cal)+"/events/"+encC(x.gcal.id),{method:"DELETE"}).catch(e=>{if(e.code!==404&&e.code!==410)throw e});const y=gcItem(kind,id);if(y){delete y.gcal;put(GC_KIND[kind].key)}}return}
+  if(x.gcal){try{await gcApi("calendars/"+encC(x.gcal.cal)+"/events/"+encC(x.gcal.id),{method:"PUT",body:JSON.stringify(body)});return}catch(e){if(e.code!==404&&e.code!==410)throw e}}
+  const cal=gc.wcal||"primary";const j=await gcApi("calendars/"+encC(cal)+"/events",{method:"POST",body:JSON.stringify(body)});
+  const y=gcItem(kind,id);if(y){y.gcal={id:j.id,cal};put(GC_KIND[kind].key)}
+  toast("También quedó en Google Calendar")
+ }catch(e){if(e&&e.code==="token")gcQueue({kind,id,want});else gcFail(e)}}
+function gcQueue(q){gc.queue=gc.queue.filter(o=>!(o.kind===q.kind&&o.id===q.id));gc.queue.push(q);gcSave()}
+function gcFlushQueue(){if(!gcTokOk()||!gc.queue.length)return;const Q=gc.queue.slice();gc.queue=[];gcSave();
+ Q.forEach(q=>{if(q.del)gcApi("calendars/"+encC(q.cal)+"/events/"+encC(q.ev),{method:"DELETE"}).catch(e=>{if(e&&e.code==="token")gcQueue(q)});else gcPush(q.kind,q.id,q.want)})}
+/* Al borrar un elemento de Corcho, borra también su evento. */
+function gcForget(x){if(!x||!x.gcal)return;const q={del:true,cal:x.gcal.cal,ev:x.gcal.id,kind:"del",id:x.gcal.id};
+ if(gcTokOk())gcApi("calendars/"+encC(q.cal)+"/events/"+encC(q.ev),{method:"DELETE"}).catch(e=>{if(e&&e.code==="token")gcQueue(q)});else gcQueue(q)}
+/* Casilla dentro de los formularios. */
+function gcField(kind,x,isNew,note){if(!gcOn())return "";const on=x.gcal?true:isNew?!!gc.def[kind]:false;
+ return '<label class="gc-opt"><input type="checkbox" name="gcal" value="1"'+(on?" checked":"")+"><span>"+GC_IC+" También en Google Calendar"+(note?'<small class="muted">'+note+"</small>":"")+"</span></label>"}
+/* Se llama desde el guardado del formulario (es un toque: puede pedir permiso). */
+function gcAfterSave(kind,id,fd,isNew){if(!gcOn())return;const want=!!fd.get("gcal");const x=gcItem(kind,id);if(!x)return;
+ if(isNew){gc.def[kind]=want;gcSave()}
+ if(!want&&!x.gcal)return;
+ if(gcTokOk()){gcPush(kind,id,want);return}
+ if(!want){gcPush(kind,id,false);return}
+ gcAuth().then(()=>{gcPush(kind,id,true);gcFlushQueue()},e=>{gcQueue({kind,id,want:true});gcFail(e)})}
+/* Si cambia algo desde otro lado (completar, pagar), actualiza el evento sin pedir permiso. */
+function gcTouch(kind,id){const x=gcItem(kind,id);if(x&&x.gcal&&gcOn())gcPush(kind,id,true)}
+function gcCard(){const S=window.CorchoSync;
+ let body,foot="";
+ if(!S||!S.available||!S.user){body='<p class="small" style="margin:0">Para conectar tu Google Calendar, primero iniciá sesión con Google en <b>Sincronización</b>, acá arriba.</p>'}
+ else if(!gcOn()){body='<p class="small" style="margin:0">Mirá tus eventos de Google Calendar dentro del calendario de Tareas y en Hoy, y mandá tareas, recordatorios y vencimientos a tu calendario con un toque.</p>';foot='<button class="btn primary" data-act="gcConnect">'+GOOGLE_G+" Conectar Google Calendar</button>"}
+ else{
+  body='<div class="sync-row"><span class="sync-dot" data-st="'+(gcTokOk()?"ok":"desconectado")+'"></span><b>'+(gcTokOk()?"Conectado":"Conectado · en pausa")+"</b></div>";
+  body+='<p class="small" style="margin:6px 0 0">'+(gcTokOk()?"Tus eventos se actualizan solos durante la próxima hora.":"Por seguridad, Google da permiso por una hora. Tocá <b>Actualizar</b> para traer los cambios (se abre y se cierra una ventana de Google).")+"</p>";
+  if(gc.last)body+='<p class="small muted" style="margin:4px 0 0">Última actualización: '+new Date(gc.last).toLocaleString("es-AR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+"</p>";
+  if(gc.queue.length)body+='<p class="small" style="margin:4px 0 0">'+gc.queue.length+(gc.queue.length===1?" cambio espera":" cambios esperan")+" para mandarse a Google Calendar.</p>";
+  if(gc.cals&&gc.cals.length){body+='<div class="field" style="margin-top:12px"><span class="flabel">Calendarios que se muestran</span><div class="gc-cals">'+gc.cals.map(c=>'<label class="gc-cal"><input type="checkbox" data-gccal="'+esc(c.id)+'"'+(c.on?" checked":"")+'><span class="gc-dot" style="--gc:'+esc(c.color)+'"></span><span>'+esc(c.name)+"</span></label>").join("")+"</div></div>";
+   const W=gc.cals.filter(c=>c.w);if(W.length>1)body+='<div class="field"><label for="gc-w">Lo que mandes desde Corcho va a</label><select id="gc-w">'+W.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===gc.wcal?" selected":"")+">"+esc(c.name)+"</option>").join("")+"</select></div>"}
+  if(gc.err)body+='<p class="small neg" style="margin:8px 0 0">'+esc(gc.err)+"</p>";
+  foot='<button class="btn'+(gcTokOk()?"":" primary")+'" data-act="gcRefresh">Actualizar</button><button class="btn" data-act="gcOff">Desconectar</button>';
+ }
+ return card("ajustes","Google Calendar","",body,foot)}
 
 /* ================= PAGOS Y VENCIMIENTOS ================= */
 D.pagos=Object.assign({items:[],tarjetas:[],hist:[]},load("pagos",{}));KEY.pagos="pagos";
@@ -2449,15 +2624,15 @@ function renderPagos(){
 function pagar(id,kind){
  const f=FIN(),t=today();let it=null;
  if(kind==="tarjeta"){const c=D.pagos.tarjetas.find(x=>x.id===id);if(!c)return;const i=cardInfo(c);it={desc:"Pago tarjeta "+c.nombre,monto:+c.monto||0,cat:"deudas",cuenta:c.cuenta};c.pagado=i.pend;c.monto=0}
- else{const p=D.pagos.items.find(x=>x.id===id);if(!p)return;it={desc:p.desc,monto:+p.monto||0,cat:p.cat,cuenta:p.cuenta};if(p.forma==="mensual"){p.fecha=addMonths(p.fecha,1);p.avisado=null}else{p.pagado=true;p.pagadoEn=t}}
+ else{const p=D.pagos.items.find(x=>x.id===id);if(!p)return;it={desc:p.desc,monto:+p.monto||0,cat:p.cat,cuenta:p.cuenta};if(p.forma==="mensual"){p.fecha=addMonths(p.fecha,1);p.avisado=null}else{p.pagado=true;p.pagadoEn=t}gcTouch("pago",p.id)}
  D.pagos.hist.push({desc:it.desc,monto:it.monto,fecha:t});if(D.pagos.hist.length>200)D.pagos.hist=D.pagos.hist.slice(-200);put("pagos");
  let reg=false;if(f&&it.monto>0){try{const cfg=f.cfg();const cat=cfg.categorias.some(c=>c.id===it.cat)?it.cat:f.classify(it.desc);f.addItems([{id:uid(),fecha:t,concepto:it.desc,monto:it.monto,tipo:"gasto",cat,cuenta:it.cuenta||cfg.cuentaDefault}]);reg=true}catch(e){}}
  toast("Pagado: "+it.desc+(reg?". Lo sumé a tus gastos del mes.":""));renderPagos();badges();if(view==="hoy")render();
 }
 function pagoSheet(id){
  const cfg=finCfg()||{categorias:[],cuentas:[]};const p=id?D.pagos.items.find(x=>x.id===id):{desc:"",monto:"",fecha:addDays(today(),7),forma:"puntual",cat:"",cuenta:cfg.cuentaDefault||""};if(!p)return;
- openSheet({title:id?"Editar pago":"Nuevo pago",html:()=>'<form class="form" id="sfPago" autocomplete="off"><div class="field"><label for="pg-d">Descripción</label><input id="pg-d" name="desc" required maxlength="80" value="'+esc(p.desc)+'" placeholder="Ej.: Plan de celular, Expensas, Cuota auto" autofocus></div><div class="frow"><div class="field"><label for="pg-m">Monto</label><input type="number" id="pg-m" name="monto" min="0" step="any" inputmode="decimal" required value="'+esc(p.monto)+'"></div><div class="field"><label for="pg-f">Vence</label><input type="date" id="pg-f" name="fecha" required value="'+p.fecha+'"></div></div><div class="field"><span class="flabel">Forma</span><div class="chips"><label><input type="radio" name="forma" value="puntual"'+(p.forma!=="mensual"?" checked":"")+'><span>Una vez</span></label><label><input type="radio" name="forma" value="mensual"'+(p.forma==="mensual"?" checked":"")+'><span>Todos los meses</span></label></div></div><div class="frow"><div class="field"><label for="pg-c">Categoría</label><select id="pg-c" name="cat"><option value="">Automática</option>'+cfg.categorias.filter(c=>!c.ahorro).map(c=>'<option value="'+esc(c.id)+'"'+(c.id===p.cat?" selected":"")+">"+esc(c.nombre)+"</option>").join("")+'</select></div><div class="field"><label for="pg-a">Cuenta</label><select id="pg-a" name="cuenta">'+cfg.cuentas.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===p.cuenta?" selected":"")+">"+esc(c.nombre)+"</option>").join("")+'</select></div></div><p class="small muted" style="margin:0">Cuando lo marques como pagado, se suma solo a tus gastos del mes. Si es mensual, pasa al mes siguiente.</p><div class="sheet-actions">'+(id?delBtn("pago",id):"")+'<span class="grow"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Guardar</button></div></form>',
- forms:{sfPago(fd){const o={desc:String(fd.get("desc")).trim(),monto:Math.max(0,+fd.get("monto")||0),fecha:fd.get("fecha"),forma:fd.get("forma")||"puntual",cat:fd.get("cat")||"",cuenta:fd.get("cuenta")||""};if(!o.desc||!o.fecha)return;if(id){if(o.fecha!==p.fecha)p.avisado=null;Object.assign(p,o)}else D.pagos.items.push(Object.assign({id:uid(),pagado:false},o));put("pagos");closeSheet();renderPagos();toast(id?"Pago guardado":"Pago agregado")}}});
+ openSheet({title:id?"Editar pago":"Nuevo pago",html:()=>'<form class="form" id="sfPago" autocomplete="off"><div class="field"><label for="pg-d">Descripción</label><input id="pg-d" name="desc" required maxlength="80" value="'+esc(p.desc)+'" placeholder="Ej.: Plan de celular, Expensas, Cuota auto" autofocus></div><div class="frow"><div class="field"><label for="pg-m">Monto</label><input type="number" id="pg-m" name="monto" min="0" step="any" inputmode="decimal" required value="'+esc(p.monto)+'"></div><div class="field"><label for="pg-f">Vence</label><input type="date" id="pg-f" name="fecha" required value="'+p.fecha+'"></div></div><div class="field"><span class="flabel">Forma</span><div class="chips"><label><input type="radio" name="forma" value="puntual"'+(p.forma!=="mensual"?" checked":"")+'><span>Una vez</span></label><label><input type="radio" name="forma" value="mensual"'+(p.forma==="mensual"?" checked":"")+'><span>Todos los meses</span></label></div></div><div class="frow"><div class="field"><label for="pg-c">Categoría</label><select id="pg-c" name="cat"><option value="">Automática</option>'+cfg.categorias.filter(c=>!c.ahorro).map(c=>'<option value="'+esc(c.id)+'"'+(c.id===p.cat?" selected":"")+">"+esc(c.nombre)+"</option>").join("")+'</select></div><div class="field"><label for="pg-a">Cuenta</label><select id="pg-a" name="cuenta">'+cfg.cuentas.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===p.cuenta?" selected":"")+">"+esc(c.nombre)+"</option>").join("")+'</select></div></div><p class="small muted" style="margin:0">Cuando lo marques como pagado, se suma solo a tus gastos del mes. Si es mensual, pasa al mes siguiente.</p>'+gcField("pago",p,!id)+'<div class="sheet-actions">'+(id?delBtn("pago",id):"")+'<span class="grow"></span><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn primary">Guardar</button></div></form>',
+ forms:{sfPago(fd){const o={desc:String(fd.get("desc")).trim(),monto:Math.max(0,+fd.get("monto")||0),fecha:fd.get("fecha"),forma:fd.get("forma")||"puntual",cat:fd.get("cat")||"",cuenta:fd.get("cuenta")||""};if(!o.desc||!o.fecha)return;let nid=id;if(id){if(o.fecha!==p.fecha)p.avisado=null;Object.assign(p,o)}else{nid=uid();D.pagos.items.push(Object.assign({id:nid,pagado:false},o))}put("pagos");closeSheet();renderPagos();toast(id?"Pago guardado":"Pago agregado");gcAfterSave("pago",nid,fd,!id)}}});
 }
 function tarjetaSheet(id){
  const cfg=finCfg()||{cuentas:[]};const c=id?D.pagos.tarjetas.find(x=>x.id===id):{nombre:"",cierre:25,vence:5,monto:"",cuenta:cfg.cuentaDefault||""};if(!c)return;
@@ -2670,6 +2845,11 @@ document.addEventListener("focusout",()=>setTimeout(()=>{if(pending&&!SH){const 
 
 /* ================= acciones ================= */
 const ACT={
+ gcConnect:()=>{gcAuth().then(()=>gcLoadCals()).then(()=>{toast("Google Calendar conectado");gcFlushQueue();gcEnsure(gcMonthsNow(),true);render()}).catch(gcFail)},
+ gcRefresh:()=>{(gcTokOk()?Promise.resolve():gcAuth()).then(()=>gcLoadCals()).then(()=>{gcFlushQueue();gcEnsure(gcMonthsNow(),true);render()}).catch(gcFail)},
+ gcOff:b=>{if(!armed(b))return;gc={cache:{},queue:[],def:{}};gcSave();render();toast("Google Calendar desconectado")},
+ gcEv:b=>gcEvSheet(b.dataset.id),
+ gcToTask:b=>{const e=gcFind(b.dataset.id);if(!e)return;SH=null;taskSheet(null,{title:e.title,due:e.date,time:e.ad?"":e.time,notes:e.loc||""})},
  close:()=>closeSheet(),
  fijoCheck:b=>fijoCheck(b.dataset.id),
  fijoEdit:b=>fijoSheet(b.dataset.id),
@@ -2708,7 +2888,7 @@ const ACT={
  tNew:()=>taskSheet(),
  tEdit:b=>taskSheet(b.dataset.id),
  tFilter:b=>{tF=b.dataset.v;render()},
- tToggle:b=>{const x=D.tareas.find(t=>t.id===b.dataset.id);if(!x)return;x.done=!x.done;x.doneAt=x.done?today():null;x.doneTs=x.done?Date.now():null;put("tareas");render();if(x.done)toast("Completaste: "+x.title)},
+ tToggle:b=>{const x=D.tareas.find(t=>t.id===b.dataset.id);if(!x)return;x.done=!x.done;x.doneAt=x.done?today():null;x.doneTs=x.done?Date.now():null;put("tareas");render();gcTouch("tarea",x.id);if(x.done)toast("Completaste: "+x.title)},
  hNew:()=>habitSheet(),
  hQuick:b=>habitSheet(null,b.dataset.v),
  hOpen:b=>habitSheet(b.dataset.id),
@@ -2749,6 +2929,7 @@ const ACT={
  aTema:b=>{D.cfg.tema=b.dataset.v;put("cfg");applyTheme();render()},
  aExport:()=>exportAll(),
  kill:b=>{if(!armed(b))return;const w=b.dataset.what,id=b.dataset.id;
+  if(w==="tarea"||w==="rec"||w==="pago")gcForget(gcItem(w,id));
   if(w==="tarea"){D.tareas=D.tareas.filter(x=>x.id!==id);put("tareas");closeSheet();toast("Tarea eliminada")}
   else if(w==="tareasHechas"){D.tareas=D.tareas.filter(x=>!x.done);put("tareas");render();toast("Tareas hechas borradas")}
   else if(w==="habito"){D.habitos=D.habitos.filter(x=>x.id!==id);put("habitos");closeSheet();toast("Hábito eliminado")}
@@ -2790,6 +2971,8 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
  const el=e.target;
+ if(el.dataset&&el.dataset.gccal!=null){const c=(gc.cals||[]).find(x=>x.id===el.dataset.gccal);if(c){c.on=el.checked;gc.cache={};gcSave();gcEnsure(gcMonthsNow(),true);render()}return}
+ if(el.id==="gc-w"){gc.wcal=el.value;gcSave();toast("Guardado");return}
  if(el.dataset&&el.dataset.fijo){const it=D.fijos.items.find(x=>x.id===el.dataset.fijo);if(it){const v=el.value;it.monto=v===""?null:Math.max(0,+v||0);put("fijos");renderFijos()}return}
  if(el.id==="fxReg"){D.fijos.registrar=el.checked;put("fijos");toast(el.checked?"Al tildar se suman a tus gastos":"Al tildar solo se marcan como pagados");return}
  if(el.id==="fLabel"){D.enfoque.timer.label=el.value;put("enfoque");return}
