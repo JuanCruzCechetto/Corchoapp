@@ -924,6 +924,7 @@ function donutSvg(parts,total,size){const r=size/2-12,c=2*Math.PI*r,cx=size/2;le
 function renderFinDash(){
  const el=$("#finDash");const f=FIN();if(!el||!f)return;let d;try{d=f.data()}catch(e){return}
  const k=d.key,t=today(),isCur=k===t.slice(0,7),n=monthDays(k),last=isCur?parseISO(t).getDate():n;
+ const [yy,mm]=k.split("-").map(Number);
  const prevK=addMonths(k+"-01",-1).slice(0,7);
  if(fdPrev.k!==prevK&&!fdPrev.loading){fdPrev={k:prevK,items:null,loading:true};Promise.resolve(f.getMonth(prevK)).then(m=>{fdPrev={k:prevK,items:(m&&m.items)||[],loading:false};renderFinDash()}).catch(()=>{fdPrev={k:prevK,items:[],loading:false}})}
  const pItems=fdPrev.k===prevK?fdPrev.items:null;
@@ -931,21 +932,41 @@ function renderFinDash(){
  const cum=(items,len,fn)=>{const by={};(items||[]).forEach(it=>{const dd=+String(it.fecha).slice(8,10);by[dd]=(by[dd]||0)+fn(it)});const o=[];let a=0;for(let i=1;i<=len;i++){a+=by[i]||0;o.push(a)}return o};
  const fIng=it=>it.tipo==="ingreso"?it.monto:0,fGas=it=>it.tipo!=="ingreso"&&!isAh(it)?it.monto:0,fAho=it=>it.tipo!=="ingreso"&&isAh(it)?it.monto:0,fNet=it=>it.tipo==="ingreso"?it.monto:-it.monto;
  const tot=(items,fn)=>(items||[]).reduce((s,it)=>s+fn(it),0);
- const vs=(a,b)=>{if(pItems==null)return "Cargando mes anterior…";if(!b)return "Sin datos del mes anterior";const p=(a-b)/Math.abs(b)*100;return (p>=0?"+":"−")+Math.abs(Math.round(p))+"% vs. mes anterior"};
+ const vs=(a,b,inv)=>{if(pItems==null||!b)return "";const p=Math.round((a-b)/Math.abs(b)*100);if(!p)return '<span class="fh-vs">= '+MC[(mm+10)%12]+"</span>";const good=inv?p<0:p>0;return '<span class="fh-vs '+(good?"pos":"neg")+'">'+(p>0?"+":"−")+Math.abs(p)+"% vs "+MC[(mm+10)%12]+"</span>"};
  const ing=tot(d.items,fIng),gas=tot(d.items,fGas),aho=tot(d.items,fAho),net=ing-gas-aho;
- const pI=tot(pItems,fIng),pG=tot(pItems,fGas),pA=tot(pItems,fAho),pN=pI-pG-pA;
- const sp=(fn,cls)=>chartSlot(w=>lineSvg(cum(d.items,last,fn),w,40,{cls:"spark "+(cls||""),area:true,aria:"Evolución del mes"}),40,"spark-slot");
- let h='<div class="kpis k4">'+kpi("Ingresos",money(ing),vs(ing,pI),"pos",sp(fIng,"pos"))+kpi("Gastos",money(gas),vs(gas,pG),"",sp(fGas,"neg"))+kpi("Ahorro",money(aho),vs(aho,pA),"",sp(fAho))+kpi("Balance del mes",money(net),vs(net,pN),net<0?"neg":"",sp(fNet))+"</div>";
+ const pI=tot(pItems,fIng),pG=tot(pItems,fGas);
+ const sgn=v=>(v>0?"+":v<0?"−":"")+money(Math.abs(v));
+ /* ---- tarjeta principal ---- */
+ const cfg=d.cfg,o=cfg.objetivo||{};
+ const fijos=(cfg.ingresos||[]).filter(i=>i.tipo==="fijo").reduce((s,i)=>s+(+i.monto||0),0),ingRef=Math.max(ing,fijos);
+ const left=isCur?n-last+1:0;
+ const ahPct=ing>0?Math.round(net/ing*100):null;
+ let tip="",goal="";
+ if(o.tipo==="ahorro"){
+  const meta=ingRef*(+o.pct||0)/100,tope=ingRef-meta,rest=tope-gas,actual=ing-gas,p=meta>0?Math.max(0,Math.min(1,actual/meta)):0;
+  if(isCur&&ingRef>0)tip=rest>0?"Podés gastar <b class=\"num\">"+money(rest/left)+"</b> por día hasta fin de mes sin tocar tu meta de ahorro.":"Ya usaste todo el margen del mes: cada gasto extra sale de tu meta de ahorro.";
+  if(meta>0)goal='<div class="fh-goal"><div class="fh-goal-h"><span class="eyebrow">Meta de ahorro · '+(+o.pct||0)+'%</span><span class="num">'+Math.round(p*100)+"% · "+money(Math.max(0,actual))+" / "+money(meta)+'</span></div><div class="fh-bar"><i style="width:'+(p*100).toFixed(1)+'%"></i></div></div>';
+ }else{
+  const isF=o.tipo==="fondo",meta=+o.meta||0,extra=isF?aho:tot(d.items,it=>it.tipo!=="ingreso"&&it.cat==="deudas"?it.monto:0),acum=(+o.acumulado||0)+extra,p=meta>0?Math.min(1,acum/meta):0;
+  if(isCur&&d.disp>0)tip="Podés gastar <b class=\"num\">"+money(d.disp/left)+"</b> por día hasta fin de mes sin quedar en negativo.";else if(isCur&&d.disp<=0)tip="Tu balance está en cero o negativo: frená los gastos que no sean urgentes.";
+  if(meta>0)goal='<div class="fh-goal"><div class="fh-goal-h"><span class="eyebrow">'+(isF?"Fondo de emergencia":"Deudas pagadas")+'</span><span class="num">'+Math.round(p*100)+"% · "+money(acum)+" / "+money(meta)+'</span></div><div class="fh-bar"><i style="width:'+(p*100).toFixed(1)+'%"></i></div></div>';
+ }
+ let h='<article class="card fh"><header class="fh-head"><span class="eyebrow">Tu mes · '+cap(MESES[mm-1])+'</span><div class="fh-add"><button class="btn sm" data-act="movNuevo" data-v="ingreso" aria-label="Cargar un ingreso">'+ico("plus",2.2)+'Ingreso</button><button class="btn sm primary" data-act="movNuevo" data-v="gasto" aria-label="Cargar un gasto">'+ico("plus",2.2)+"Gasto</button></div></header>";
+ h+='<div class="fh-tiles"><div class="fh-tile"><span class="eyebrow">Ingresos</span><b class="num">'+money(ing)+"</b>"+vs(ing,pI)+'</div><div class="fh-tile"><span class="eyebrow">Gastos</span><b class="num neg">'+money(gas)+"</b>"+vs(gas,pG,true)+"</div></div>";
+ h+='<div class="fh-bal"><span class="eyebrow">Balance del mes</span>'+(ahPct!=null&&net>0?'<span class="fh-chip">ahorrás el '+ahPct+"%</span>":ahPct!=null&&net<0?'<span class="fh-chip neg">gastás más de lo que entra</span>':"")+'<b class="num '+(net<0?"neg":net>0?"pos":"")+'">'+sgn(net)+"</b></div>";
+ if(aho>0)h+='<p class="fh-note">Separaste <b class="num">'+money(aho)+"</b> para ahorro o inversión este mes.</p>";
+ if(tip)h+='<p class="fh-note">'+tip+"</p>";
+ h+=goal+"</article>";
+ el.innerHTML=h;
+ /* ---- movimientos del mes ---- */
+ const allM=(d.items||[]).slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)||0);const lastM=allM.slice(0,7);
+ const mv=$("#fdMovs");
+ if(mv)mv.innerHTML='<article class="card fm"><header class="card-head"><h2>Movimientos <span class="muted">· '+cap(MESES[mm-1])+'</span></h2><button class="linkbtn" data-act="finMovs">Ver todos'+(allM.length>7?" ("+allM.length+")":"")+" →</button></header>"+(lastM.length?'<div class="fm-head" aria-hidden="true"><span>Fecha</span><span>Descripción</span><span>Monto</span></div><ul class="fm-list">'+lastM.map(it=>{const inn=it.tipo==="ingreso";const dt=parseISO(it.fecha);return '<li><button data-act="movEdit" data-id="'+esc(it.id)+'"><span class="fm-d num">'+pad2(dt.getDate())+"/"+pad2(dt.getMonth()+1)+'</span><span class="fm-c"><b>'+esc(it.concepto)+"</b><small>"+esc(inn?"Ingreso":nameIn(cfg.categorias,it.cat)||"Sin categoría")+(nameIn(cfg.cuentas,it.cuenta)?" · "+esc(nameIn(cfg.cuentas,it.cuenta)):"")+'</small></span><span class="fm-m num '+(inn?"pos":"")+'">'+(inn?"+":"−")+money(it.monto)+"</span></button></li>"}).join("")+"</ul>":'<p class="empty">Todavía no cargaste movimientos este mes. Tocá <b>+ Gasto</b> arriba para empezar.</p>')+"</article>";
+ /* ---- anillo y evolución ---- */
+ const dn=$("#fdDon");if(dn)dn.innerHTML=donutCard(d);
  const cur=cum(d.items,last,fNet),prev=pItems?cum(pItems,monthDays(prevK),fNet):null;
- // categorías
- const byC={};(d.items||[]).forEach(it=>{if(it.tipo==="ingreso"||isAh(it))return;byC[it.cat]=(byC[it.cat]||0)+it.monto});let parts=Object.entries(byC).map(([id,v])=>({label:nameIn(d.cfg.categorias,id)||"Otros",v})).sort((a,b)=>b.v-a.v);if(parts.length>5){const rest=parts.slice(5).reduce((s,p)=>s+p.v,0);parts=parts.slice(0,5).concat([{label:"Resto",v:rest}])}
- const gt=parts.reduce((s,p)=>s+p.v,0);
- h+='<div class="fd-grid"><article class="card fd-bal"><header class="card-head"><h2>Balance del período</h2><span class="legend"><i class="lg-cur"></i>Este mes <i class="lg-prev"></i>Mes anterior</span></header><div class="fd-figs"><span>Neto <b class="num '+(net<0?"neg":"")+'">'+money(net)+'</b></span><span>Ingresos <b class="num pos">'+money(ing)+'</b></span><span>Gastos <b class="num">'+money(gas+aho)+'</b></span><span>Mes anterior <b class="num">'+(pItems?money(pN):"…")+"</b></span></div>"+chartSlot(w=>periodSvg(cur,prev,n,w,240),240)+"</article>";
- h+=donutCard(d);
- // últimos movimientos
- const lastM=(d.items||[]).slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,6);
- h+='<article class="card fd-movs"><header class="card-head"><h2>Últimos movimientos</h2><button class="linkbtn" data-act="finMovs">Ver todos →</button></header>'+(lastM.length?'<div class="tablewrap ptw"><table class="ptable"><thead><tr><th>Tipo</th><th>Descripción</th><th>Cuenta</th><th>Categoría</th><th>Fecha</th><th class="r">Monto</th></tr></thead><tbody>'+lastM.map(it=>{const inn=it.tipo==="ingreso";return "<tr><td>"+(inn?IC_IN:IC_OUT)+"</td><td><button class=\"cell-link\" data-act=\"movEdit\" data-id=\""+esc(it.id)+"\">"+esc(it.concepto)+"</button></td><td>"+esc(nameIn(d.cfg.cuentas,it.cuenta)||"—")+"</td><td>"+esc(inn?"Ingreso":nameIn(d.cfg.categorias,it.cat)||"—")+'</td><td class="num">'+parseISO(it.fecha).getDate()+" "+MC[parseISO(it.fecha).getMonth()]+'</td><td class="r num '+(inn?"pos":"neg")+'">'+(inn?"+ ":"− ")+money(it.monto)+"</td></tr>"}).join("")+"</tbody></table></div>":'<p class="empty">Pegá tus movimientos en "Cargar movimientos" para empezar.</p>')+"</article>";
- el.innerHTML=h;if(el.offsetParent)drawCharts(el);
+ const pr=$("#fdPer");if(pr)pr.innerHTML='<article class="card fd-bal"><header class="card-head"><h2>Evolución del balance</h2><span class="legend"><i class="lg-cur"></i>Este mes <i class="lg-prev"></i>Anterior</span></header>'+chartSlot(w=>periodSvg(cur,prev,n,w,190),190)+"</article>";
+ const pa=$("#p-resumen");if(pa&&pa.offsetParent)drawCharts(pa);
 }
 window.CorchoFinHook=()=>{try{renderFinDash()}catch(e){}try{const pf=$("#p-fijos");if(pf&&!pf.hidden)renderFijos()}catch(e){}};
 window.CorchoPagosRender=()=>{try{renderPagos()}catch(e){}};
@@ -978,10 +999,9 @@ function donutCard(d){
  const parts=donutParts(d,donTipo),total=parts.reduce((s,p)=>s+p.v,0);if(donSel!=null&&donSel>=parts.length)donSel=null;
  const sp=donSel!=null?parts[donSel]:null;const [yy,mm]=d.key.split("-").map(Number);
  const center=sp?'<span class="dc-cat">'+esc(sp.label)+'</span><b class="num">'+shortMoney(sp.v)+'</b><span class="dc-pct num">'+Math.round(sp.v/total*100)+"%</span>":'<b class="num">'+shortMoney(total)+'</b><span class="dc-cat">'+(donTipo==="ingreso"?"Ingresos":"Gastos")+"</span>";
- let h='<article class="card fd-cat don-card"><header class="don-head"><button class="iconbtn sm" data-act="donMes" data-v="-1" aria-label="Mes anterior">‹</button><b>'+cap(MESES[mm-1])+" de "+yy+'</b><button class="iconbtn sm" data-act="donMes" data-v="1" aria-label="Mes siguiente">›</button></header>';
- h+='<div class="don-tools"><button class="linkbtn" data-act="catsMgr">'+ico("ajustes")+' Categorías y límites</button></div>';
+ let h='<article class="card fd-cat don-card"><header class="card-head"><h2>Por categoría</h2><button class="linkbtn" data-act="catsMgr">'+ico("ajustes")+' Categorías y límites</button></header>';
  h+='<div class="seg don-seg"><button data-act="donTipo" data-v="gasto" aria-selected="'+(donTipo==="gasto")+'">Gastos</button><button data-act="donTipo" data-v="ingreso" aria-selected="'+(donTipo==="ingreso")+'">Ingresos</button></div>';
- h+='<div class="don-wrap">'+chartSlot(w=>ringSvg(parts,total,Math.min(300,w),donSel),Math.min(300,Math.round(((($("#finDash")||{}).clientWidth||340)-40)*.9)),"don-slot")+'<div class="don-center">'+center+'</div><button class="don-fab" data-act="movNuevo" data-v="'+donTipo+'" aria-label="Cargar '+(donTipo==="ingreso"?"un ingreso":"un gasto")+'">'+ico("plus",2.4)+"</button></div>";
+ h+='<div class="don-wrap">'+chartSlot(w=>ringSvg(parts,total,Math.min(300,w),donSel),Math.min(300,Math.round(((($("#fdDon")||{}).clientWidth||340)-40)*.9)),"don-slot")+'<div class="don-center">'+center+'</div><button class="don-fab" data-act="movNuevo" data-v="'+donTipo+'" aria-label="Cargar '+(donTipo==="ingreso"?"un ingreso":"un gasto")+'">'+ico("plus",2.4)+"</button></div>";
  h+=parts.length?'<ul class="don-legend">'+parts.map((p,i)=>'<li><button data-act="catVer" data-id="'+esc(p.id)+'" data-tipo="'+donTipo+'" data-i="'+i+'" class="'+(donSel===i?"on":"")+'"><i style="background:'+p.color+'"></i><span>'+esc(p.label)+(p.ahorro?' <small class="muted">· ahorro</small>':"")+'</span><b class="num">'+money(p.v)+'</b><em class="num">'+Math.round(p.v/total*100)+"%</em></button></li>").join("")+"</ul>":'<p class="empty" style="text-align:center">'+(donTipo==="ingreso"?"No hay ingresos cargados este mes.":"No hay gastos cargados este mes.")+"</p>";
  h+="</article>";
  return h;

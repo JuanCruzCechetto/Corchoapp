@@ -787,3 +787,97 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
 .gc-opt input{width:18px;height:18px;accent-color:var(--ink);margin:0;flex:none}
 .gc-opt span{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap}
 .gc-opt small{font-size:12px}
+
+/* ===== Finanzas · Resumen (rediseño) ===== */
+#p-resumen #finDash{margin-bottom:12px}
+.fh{padding:18px 18px 20px}
+.fh-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.fh-add{display:flex;gap:8px;flex:none}
+.fh-add .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 12px}
+.fh-add svg{width:14px;height:14px}
+.fh-tiles{display:grid;grid-template-columns:1fr;gap:8px}
+.fh-tile{background:#121215;border:1px solid var(--rule);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:4px 10px}
+.fh-tile .eyebrow{grid-column:1/-1;font-size:10.5px}
+.fh-tile b{font-size:24px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;line-height:1.15}
+.fh-vs{font-family:var(--f-num);font-size:11.5px;color:var(--ink-2);white-space:nowrap;padding-bottom:3px}
+.fh-vs.pos{color:var(--ok)}.fh-vs.neg{color:var(--crit)}
+.fh-bal{margin-top:8px;border:1px solid #3A3A42;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fh-bal .eyebrow{font-size:10.5px}
+.fh-bal b{margin-left:auto;font-size:24px;font-weight:600;letter-spacing:-.02em;white-space:nowrap}
+.fh-chip{font-size:11px;line-height:1;background:var(--ink);color:#000;border-radius:999px;padding:4px 8px;font-weight:600;white-space:nowrap}
+.fh-chip.neg{background:transparent;color:var(--crit);border:1px solid currentColor}
+.fh-note{margin:12px 0 0;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.fh-note b{color:var(--ink);font-weight:600}
+.fh-goal{margin-top:14px}
+.fh-goal-h{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:8px;flex-wrap:wrap}
+.fh-goal-h .eyebrow{font-size:10.5px}
+.fh-goal-h .num{font-size:11.5px;color:var(--ink-2)}
+.fh-bar{height:6px;border-radius:3px;background:#222227;overflow:hidden}
+.fh-bar i{display:block;height:100%;background:var(--ink);border-radius:3px;transition:width .6s cubic-bezier(.2,.7,.2,1)}
+@media (min-width:560px){.fh-tiles{grid-template-columns:1fr 1fr}.fh-tile b,.fh-bal b{font-size:28px}}
+/* saldo anterior → balance actual */
+#ledger.fr-sa{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:12px 16px;margin:0 0 12px;border-radius:14px}
+.fr-sa .ledger-head{order:2;margin:0;margin-left:auto}
+.fr-sa .ledger-head>.eyebrow{display:none}
+.fr-sa .eq{order:1;gap:10px 16px;flex-wrap:nowrap}
+.fr-sa .eq .op,.fr-sa .eq .term{display:none}
+.fr-sa .eq .term:first-child,.fr-sa .eq .term.total{display:flex}
+.fr-sa .eq .term .eyebrow{font-size:10px}
+.fr-sa .eq .term .v,.fr-sa .eq .term.total .v{font-size:15px;font-weight:600;letter-spacing:0}
+.fr-sa .eq .term.total{border-left:1px solid var(--rule);padding-left:16px;margin:0}
+.fr-sa .sa-edit{display:flex;align-items:center;gap:8px}
+.fr-sa .sa-edit input{width:130px}
+/* grilla: una columna en el teléfono, dos en pantallas grandes */
+.fr-grid{display:flex;flex-direction:column;gap:12px}
+.fr-col{display:contents}
+.fr-grid .card{margin:0}
+.fr-o1{order:1}.fr-o2{order:2}.fr-o3{order:3}.fr-o4{order:4}.fr-o5{order:5}.fr-o6{order:6}.fr-o7{order:7}.fr-o8{order:8}
+@media (min-width:1000px){.fr-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}.fr-col{display:flex;flex-direction:column;gap:16px}}
+.fr-grid .card-head h2 .muted{font-weight:400}
+/* alertas compactas (se ocultan si no hay) */
+.fr-alerts:has(li.empty){display:none}
+.fr-alerts .alerts{gap:0}
+.fr-alerts .alert{background:none;border-radius:0;padding:9px 0;grid-template-columns:8px minmax(0,1fr);gap:12px;border-bottom:1px solid var(--rule-2)}
+.fr-alerts .alert:last-child{border-bottom:0;padding-bottom:0}
+.fr-alerts .alert::before{width:8px;height:8px;border-radius:50%;margin-top:6px}
+.fr-alerts .alert b{font-size:13.5px}
+.fr-alerts .alert p{font-size:12.5px}
+/* movimientos del mes */
+.fm .card-head{margin-bottom:6px}
+.fm-head,.fm-list button{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:10px;align-items:center}
+.fm-head{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-weight:600;padding:4px 0 8px;border-bottom:1px solid var(--rule)}
+.fm-head span:last-child{text-align:right}
+.fm-list{list-style:none;margin:0;padding:0}
+.fm-list button{width:100%;background:none;border:0;border-bottom:1px solid var(--rule-2);color:var(--ink);font:inherit;text-align:left;padding:10px 4px 10px 0;cursor:pointer;border-radius:0;transition:background .15s}
+.fm-list li:last-child button{border-bottom:0;padding-bottom:2px}
+.fm-list button:hover{background:#111114}
+.fm-list button:active{background:#18181C}
+.fm-d{font-size:12px;color:var(--ink-2)}
+.fm-c{min-width:0}
+.fm-c b{display:block;font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fm-c small{display:block;font-size:11.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.fm-m{font-size:13.5px;white-space:nowrap;text-align:right}
+/* categorías: toque claro */
+.fr-cats .cat[data-act]{cursor:pointer;transition:background .15s;margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:8px}
+.fr-cats .cat[data-act]:active{background:#18181C}
+/* carga por texto, plegada */
+.fr-load summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.fr-load summary::-webkit-details-marker{display:none}
+.fr-load summary>span{display:flex;flex-direction:column;gap:3px}
+.fr-load summary b{font-size:15px}
+.fr-load summary::after{content:"+";flex:none;font-size:22px;line-height:1;color:var(--ink-2);transition:transform .2s}
+.fr-load[open] summary::after{transform:rotate(45deg)}
+.fr-load[open] summary{margin-bottom:14px}
+.fr-copy{display:flex}
+/* respuesta al toque */
+.fh-add .btn,.don-fab,.fr-copy .btn{transition:transform .12s ease,background .15s}
+.fh-add .btn:active,.fr-copy .btn:active{transform:scale(.96)}
+@media (prefers-reduced-motion:reduce){.fh-bar i,.fh-add .btn{transition:none}}
+.don-card .card-head .linkbtn{display:inline-flex;align-items:center;gap:6px}
+.don-card .card-head svg{width:14px;height:14px;flex:none}
+.fr-cats .cat.zero{display:none}
+.fr-cats .cat-note span:nth-child(3){display:none}
+.fr-cats .cat-fig{font-size:13px}
+.fr-cats .cat{padding-top:10px;padding-bottom:10px}
+@media (max-width:560px){#accs th:nth-child(4),#accs td:nth-child(4){display:none}#accs td,#accs th{padding-left:8px;padding-right:8px}}
+.fh-head .eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
