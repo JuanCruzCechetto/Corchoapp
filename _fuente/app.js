@@ -568,46 +568,86 @@ let rzT;window.addEventListener("resize",()=>{clearTimeout(rzT);rzT=setTimeout((
 /* ================= HOY (panel) ================= */
 const FRASES=["Un día más para avanzar, aunque sea un paso.","Lo que hacés hoy suma para lo que querés mañana.","Constancia antes que intensidad.","Hacé primero lo importante.","Pequeños hábitos, grandes cambios.","Terminá el día un poco mejor de como lo empezaste.","Enfocate en lo que depende de vos.","Lo simple, bien hecho, alcanza.","Ordená el día y el día te ordena a vos."];
 function dcard(cls,icon,title,sub,right,body,foot){return '<article class="card dcard '+(cls||"")+'"><header class="dc-head"><div class="dc-t"><h2>'+(icon?ico(icon):"")+title+"</h2>"+(sub?'<span class="small muted">'+sub+"</span>":"")+"</div>"+(right||"")+"</header>"+body+(foot?'<footer class="dc-foot">'+foot+"</footer>":"")+"</article>"}
+const HY_MARK='<svg viewBox="84 104 344 288" aria-hidden="true"><path d="M196 150V310A46 46 0 0 1 104 310" fill="none" stroke="#F4F4F5" stroke-width="40" stroke-linecap="round"/><path d="M353.6 337.0A70 70 0 1 1 353.6 247.0" fill="none" stroke="#F4F4F5" stroke-width="40" stroke-linecap="round"/><path d="M352 124H398L374 154Q404 152 406 178Q406 206 378 206Q360 206 352 196" fill="none" stroke="#E2B84A" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const FLAME='<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M12 3c.5 3.2 4.5 5.2 4.5 9.6A4.6 4.6 0 0 1 12 17.3a4.6 4.6 0 0 1-4.5-4.7c0-2.2 1.3-3.6 2.3-4.6.2 1.6.9 2.6 1.9 3.1C11.4 8.5 11.3 5.6 12 3z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>';
+function hyName(){if(D.cfg.nombre)return D.cfg.nombre;const S=window.CorchoSync;const n=S&&S.user&&S.user.displayName;return n?String(n).split(" ")[0]:""}
+/* Un solo consejo, el más importante del momento. */
+function hyTip(c){
+ const t=c.t,pl=(n,a,b)=>n+" "+(n===1?a:b);
+ const venc=c.pp.filter(p=>p.fecha<t),pronto=c.pp.filter(p=>p.fecha>=t&&p.fecha<=addDays(t,1));
+ if(venc.length)return {go:"pagos",txt:"Tenés "+pl(venc.length,"pago vencido","pagos vencidos")+": <b>"+esc(venc[0].desc)+"</b>. Resolvelo hoy y sacátelo de la cabeza."};
+ if(pronto.length)return {go:"pagos",txt:"<b>"+esc(pronto[0].desc)+"</b> vence "+(pronto[0].fecha===t?"hoy":"mañana")+" ("+money(pronto[0].monto)+")."+(pronto.length>1?" Y "+pl(pronto.length-1,"pago más","pagos más")+".":"")};
+ const late=c.pend.filter(x=>x.due<t);
+ if(late.length)return {go:"tareas",txt:"Tenés "+pl(late.length,"tarea atrasada","tareas atrasadas")+". Atacá primero <b>"+esc(late[0].title)+"</b> y el resto fluye."};
+ const urg=c.pend.filter(x=>x.prio==1);
+ if(urg.length)return {go:"tareas",txt:"Tenés "+pl(urg.length,"urgente","urgentes")+" sin resolver: <b>"+esc(urg[0].title)+"</b>. Atacala primero y el resto fluye."};
+ let fs=null;try{const f=FIN();fs=f&&f.summary()}catch(e){}
+ if(fs&&fs.crit&&fs.top)return {go:"finanzas",txt:esc(fs.top)+". Revisá tus gastos antes de seguir."};
+ const nx=c.gev.find(e=>!e.ad&&e.time>c.hm);
+ if(nx)return {go:"tareas",txt:"Lo próximo en tu agenda: <b>"+esc(nx.title)+"</b> a las "+nx.time+"."};
+ if(c.hdi&&c.hdi.pct<1&&new Date().getHours()>=17){const f=c.hdi.n-c.hdi.full;return {go:"habitos",txt:"Te "+(f===1?"falta 1 hábito":"faltan "+f+" hábitos")+" para cerrar el día perfecto."+(c.ps?" Venís con una racha de "+pl(c.ps,"día","días")+".":"")}}
+ if(c.tot&&!c.pend.length)return {go:"tareas",txt:"Terminaste todo lo de hoy. Bien ahí: el resto del día es tuyo."};
+ if(c.pend.length)return {go:"tareas",txt:"Tenés "+pl(c.pend.length,"tarea","tareas")+" para hoy. Empezá por <b>"+esc(c.pend[0].title)+"</b>."};
+ return {go:"tareas",txt:FRASES[c.doy%FRASES.length]};
+}
+const hyGo=g=>g==="pagos"?'data-act="goPagos"':'data-go="'+g+'"';
+function hyKpi(go,label,big,sub,side,p,cls){return '<button class="hy-k'+(cls?" "+cls:"")+'" '+hyGo(go)+' style="--p:'+(p==null?0:Math.max(0,Math.min(1,p))*100).toFixed(1)+'%"><span class="hy-k-l">'+label+'</span><b class="num">'+big+'</b><span class="hy-k-s">'+sub+"</span>"+(side?'<span class="hy-k-x">'+side+"</span>":"")+"</button>"}
 function renderHoy(){
- const t=today(),d=parseISO(t),doy=Math.floor((d-new Date(d.getFullYear(),0,0))/864e5);
+ const t=today(),d=parseISO(t),doy=Math.floor((d-new Date(d.getFullYear(),0,0))/864e5),tm=addDays(t,1),now=new Date(),hm=pad2(now.getHours())+":"+pad2(now.getMinutes());
  const pend=D.tareas.filter(x=>!x.done&&x.due&&x.due<=t).sort(taskSort);
  const doneT=D.tareas.filter(x=>x.done&&x.doneAt===t&&(!x.due||x.due<=t));
  const tot=pend.length+doneT.length;
  const hs=D.habitos.filter(h=>(h.creado||t)<=t&&isDue(h,t));const hdi=dayInfo(t);
  const rs=D.rec.filter(r=>!r.hecho&&r.at.slice(0,10)<=t).sort((a,b)=>a.at.localeCompare(b.at));
  const pp=pendientes().filter(p=>p.fecha<=addDays(t,30));
- let h='<section class="hero"><div class="hero-date"><b>'+d.getDate()+"</b><span>"+cap(DIAS[d.getDay()])+"<small>"+cap(MC[d.getMonth()])+" "+d.getFullYear()+'</small></span></div><div class="hero-msg"><h1>'+greet()+(D.cfg.nombre?", "+esc(D.cfg.nombre):"")+"</h1><p>"+FRASES[doy%FRASES.length]+"</p></div></section>";
+ const gm=gcMap([t,tm]),gev=gm[t]||[],gevT=gm[tm]||[];
+ const ps=D.habitos.length?perfectStreak():0;
+ const nm=hyName();
+ let h='<header class="hy-head"><span class="eyebrow">'+cap(DIAS[d.getDay()])+", "+d.getDate()+" de "+MESES[d.getMonth()]+"</span><h1>"+greet()+(nm?", "+esc(nm):"")+"</h1></header>";
  const SY=window.CorchoSync;let later=null;try{later=localStorage.getItem("corcho-sync-later")}catch(e){}
  if(SY&&SY.available&&SY.ready&&!SY.user&&SY.state!=="sin-conexion"&&later!==t)h+='<div class="sync-banner"><div><b>Sincronizá tus datos</b><span class="small muted">Iniciá sesión con Google para ver lo mismo en el teléfono y en la computadora.</span></div><div class="vact"><button class="btn" data-act="syncLater">Ahora no</button><button class="btn primary" data-act="syncIn">'+GOOGLE_G+' Iniciar sesión</button></div></div>';
- h+='<div class="dash">';
- // tareas
- const tl=pend.slice(0,5).concat(doneT.slice(0,Math.max(0,5-pend.length)));
- const gev=(gcMap([t])[t]||[]);
- h+=dcard("d-tareas","tareas","Tareas",tot?doneT.length+" de "+tot+" hoy":"Nada para hoy",tot?ring(doneT.length/tot):"",
-  (gev.length?'<div class="group-h gc-h">Agenda'+gcStatus()+'</div><ul class="list gc-list">'+gev.slice(0,5).map(gcRow).join("")+"</ul>"+(gev.length>5?'<button class="linkbtn small" data-go="tareas">+'+(gev.length-5)+" eventos más</button>":"")+(tl.length?'<div class="group-h">Tareas</div>':""):"")+
-  (tl.length?'<ul class="list">'+tl.map(taskRow).join("")+"</ul>":gev.length?"":'<p class="empty">No tenés tareas para hoy.</p>'),
-  '<button class="linkbtn" data-act="tNew">+ Nueva tarea</button><span class="grow"></span><button class="linkbtn" data-go="tareas">Ver todo →</button>');
- // saldo
+ // copiloto
+ const tip=hyTip({t,pend,tot,pp,gev,hm,hdi,ps,doy});
+ h+='<button class="hy-pilot" '+hyGo(tip.go)+'><span class="hy-mark">'+HY_MARK+'</span><span class="hy-pilot-t"><span class="eyebrow">Corcho · tu copiloto</span><span>'+tip.txt+"</span></span></button>";
+ // cuatro indicadores
+ const avg=avgPct(7);
+ let k="";
+ k+=hyKpi("habitos","Hábitos",hdi?pctTxt(hdi.pct):"—",hdi?hdi.full+" de "+hdi.n+" hoy":D.habitos.length?"Nada programado hoy":"Elegí tus hábitos",ps?'<span class="hy-streak">'+FLAME+" "+ps+(ps===1?" día":" días")+"</span>":avg!=null&&hdi?"prom. 7 días "+pctTxt(avg):"",hdi?hdi.pct:0);
+ const late=pend.filter(x=>x.due<t).length;
+ k+=hyKpi("tareas","Tareas",tot?pctTxt(doneT.length/tot):"—",tot?doneT.length+" de "+tot+" hechas":"Nada para hoy",late?'<span class="neg">'+late+(late===1?" atrasada":" atrasadas")+"</span>":"",tot?doneT.length/tot:0);
  const f=FIN();let fd=null;try{fd=f&&f.data()}catch(e){}
- if(fd){const cur=t.slice(0,7)===fd.key;const n=cur?d.getDate():monthDays(fd.key);const serie=finSerie(fd.items,fd.sa,fd.key,n);const last7=serie.slice(-7);const ch=last7.length>1?last7[last7.length-1]-last7[0]:0;
-  const labs=last7.map((_,i)=>{const dd=addDays(fd.key+"-"+pad2(n),i-(last7.length-1));return DC[wd(dd)]});
-  h+=dcard("d-saldo span2","finanzas","Saldo","Balance de "+esc(fd.label),'<div class="dc-big"><b class="num'+(fd.disp<0?" neg":"")+'">'+money(fd.disp)+'</b><span class="small '+(ch>=0?"pos":"neg")+'">'+(ch>=0?"+":"−")+money(Math.abs(ch))+" esta semana</span></div>",
-   last7.length>1?chartSlot(w=>lineSvg(last7,w,120,{labels:labs,area:true,dot:true,aria:"Saldo de los últimos 7 días"}),120):'<p class="empty">Cargá movimientos en Finanzas para ver cómo evoluciona tu saldo.</p>',
-   '<span class="small muted">Gastos del mes: <b class="num">'+money(fd.gas)+"</b>"+(fd.alertas?" · "+fd.alertas+(fd.alertas===1?" alerta":" alertas"):"")+'</span><span class="grow"></span><button class="linkbtn" data-go="finanzas">Ir a finanzas →</button>');}
- // hábitos
- h+=dcard("d-habitos","habitos","Hábitos",hs.length?(hdi?hdi.full:0)+" de "+hs.length:"Sin hábitos hoy",hdi?ring(hdi.pct):"",
+ if(fd){const sh=typeof shortMoney==="function"?shortMoney(fd.disp).replace(" M$"," M").replace(" k$"," k").replace(/ \$$/,""):money(fd.disp);const ap=fd.ing>0?Math.round((fd.ing-fd.gas)/fd.ing*100):null;
+  k+=hyKpi("finanzas","Balance",(fd.disp<0?"":"$")+sh,"Gastos "+money(fd.gas),ap!=null?'<span class="'+(ap>=0?"pos":"neg")+'">'+(ap>=0?"ahorrás "+ap+"%":"en rojo")+"</span>":"",fd.ing>0?Math.min(1,fd.gas/fd.ing):0,fd.disp<0?"neg-v":"")}
+ const p7=pp.filter(p=>p.fecha<=addDays(t,7)),nx=pp[0];
+ k+=hyKpi("pagos","Por pagar",p7.length?money(p7.reduce((s,p)=>s+(+p.monto||0),0)):"$ 0",p7.length?"en los próximos 7 días":"Nada en 7 días",nx?'<span class="'+(nx.fecha<t?"neg":"")+'">'+esc(nx.desc)+" · "+(nx.fecha<t?"vencido":nx.fecha===t?"hoy":nx.fecha===tm?"mañana":"en "+Math.round((parseISO(nx.fecha)-d)/864e5)+" días")+"</span>":"",null,"no-bar");
+ h+='<div class="hy-kpis">'+k+"</div>";
+ // HOY
+ const rec=rs.length?'<div class="group-h">Recordatorios</div><ul class="list">'+rs.slice(0,4).map(remRow).join("")+"</ul>":"";
+ const ag=gev.length?'<div class="group-h gc-h">Agenda'+gcStatus()+'</div><ul class="list gc-list">'+gev.slice(0,5).map(gcRow).join("")+"</ul>"+(gev.length>5?'<button class="linkbtn small" data-go="tareas">+'+(gev.length-5)+" eventos más</button>":""):"";
+ const tl=pend.concat(doneT);
+ const tasks=tl.length?(ag||rec?'<div class="group-h">Tareas</div>':"")+'<ul class="list">'+tl.slice(0,8).map(taskRow).join("")+"</ul>"+(tl.length>8?'<button class="linkbtn small" data-go="tareas">+'+(tl.length-8)+" tareas más</button>":""):"";
+ let hoy='<article class="card hy-day"><header class="hy-day-h"><span class="eyebrow">Hoy · '+d.getDate()+" "+MC[d.getMonth()]+'</span><span class="num muted">'+(tot?doneT.length+"/"+tot:"")+'</span></header><div class="hy-line" style="--p:'+(tot?doneT.length/tot*100:0).toFixed(1)+'%"></div>';
+ hoy+=ag+tasks+rec;
+ if(!tl.length&&!ag&&!rec)hoy+='<p class="empty">Nada pendiente para hoy.</p>';
+ hoy+='<form id="hyQ" class="hy-q" autocomplete="off"><span aria-hidden="true">+</span><input id="hyQt" name="title" maxlength="200" placeholder="Tarea rápida para hoy…" aria-label="Tarea rápida para hoy"></form>';
+ hoy+='<footer class="hy-foot"><button class="linkbtn" data-act="rNew">+ Recordatorio</button><span class="grow"></span><button class="linkbtn" data-go="tareas">Ver todo →</button></footer></article>';
+ // MAÑANA
+ const tT=D.tareas.filter(x=>!x.done&&x.due===tm).sort(taskSort),rT=D.rec.filter(r=>!r.hecho&&r.at.slice(0,10)===tm).sort((a,b)=>a.at.localeCompare(b.at)),pT=pp.filter(p=>p.fecha===tm);
+ const md=parseISO(tm);
+ let man='<article class="card hy-day hy-tm"><header class="hy-day-h"><span class="eyebrow">Mañana · '+md.getDate()+" "+MC[md.getMonth()]+'</span><span class="num muted">'+(tT.length+gevT.length+rT.length+pT.length||"")+"</span></header>";
+ const items=gevT.map(gcRow).concat(rT.map(remRow),tT.map(taskRow),pT.map(p=>'<li class="hy-pay"><button data-act="goPagos"><span class="hy-pay-i">$</span><span><b>Vence '+esc(p.desc)+'</b></span><span class="num neg">−'+money(p.monto)+"</span></button></li>"));
+ man+=items.length?'<ul class="list">'+items.join("")+"</ul>":'<p class="empty">Nada planeado para mañana.</p>';
+ man+='<footer class="hy-foot"><button class="linkbtn" data-act="hyTm">+ Tarea para mañana</button></footer></article>';
+ // hábitos de hoy
+ const hab=dcard("d-habitos","habitos","Hábitos de hoy",hs.length?(hdi?hdi.full:0)+" de "+hs.length:"Sin hábitos hoy",hdi?ring(hdi.pct):"",
   hs.length?'<div class="hchips">'+hs.map(x=>{const c=hCnt(x,t),m=x.meta||1,ok=c>=m;return '<button class="hchip '+(ok?"on":c?"part":"")+'" data-act="hTap" data-id="'+x.id+'" style="--hc:var(--ink)"><i>'+(ok?ico("check",2.6):m>1?c+"/"+m:"")+"</i><span>"+hName(x)+"</span></button>"}).join("")+"</div>":'<p class="empty">'+(D.habitos.length?"Hoy no tenés hábitos programados.":"Todavía no elegiste hábitos.")+"</p>",
   '<span class="grow"></span><button class="linkbtn" data-go="habitos">'+(D.habitos.length?"Ver hábitos →":"Elegir hábitos →")+"</button>");
- // recordatorios
- h+=dcard("d-rec span2","recordatorios","Recordatorios",rs.length?rs.length+" para hoy":"Nada para hoy","",
-  rs.length?'<ul class="list">'+rs.slice(0,4).map(remRow).join("")+"</ul>":'<p class="empty">No tenés recordatorios para hoy.</p>',
-  '<button class="linkbtn" data-act="rNew">+ Nuevo recordatorio</button><span class="grow"></span><button class="linkbtn" data-go="recordatorios">Ver todos →</button>');
  // pagos
- h+=dcard("d-pagos span2","pagos","Próximos pagos",pp.length?pp.length+" en los próximos 30 días":"Sin vencimientos cerca",pp.length?'<b class="num neg dc-sum">−'+money(pp.reduce((s,p)=>s+(+p.monto||0),0))+"</b>":"",
+ const pag=dcard("d-pagos","pagos","Próximos pagos",pp.length?pp.length+" en los próximos 30 días":"Sin vencimientos cerca",pp.length?'<b class="num neg dc-sum">−'+money(pp.reduce((s,p)=>s+(+p.monto||0),0))+"</b>":"",
   pp.length?'<div class="plist">'+pp.slice(0,4).map(p=>'<div class="prow"><div><b>'+esc(p.desc)+'</b><span class="small '+(p.fecha<t?"neg":"muted")+'">'+(p.fecha<t?"Vencido · ":"Vence ")+fmtDay(p.fecha).toLowerCase()+'</span></div><span class="num neg">−'+money(p.monto)+"</span></div>").join("")+"</div>":'<p class="empty">Cargá tus cuentas a pagar y tarjetas para ver los vencimientos acá.</p>',
   '<button class="linkbtn" data-act="pNuevo">+ Nuevo pago</button><span class="grow"></span><button class="linkbtn" data-act="goPagos">Ver por pagar →</button>');
- h+="</div>";
- $("#v-hoy").innerHTML=h;drawCharts($("#v-hoy"));gcEnsure([t.slice(0,7)]);
+ h+='<div class="hy-grid"><div class="hy-col">'+hoy+man+'</div><div class="hy-col">'+hab+pag+"</div></div>";
+ $("#v-hoy").innerHTML=h;drawCharts($("#v-hoy"));gcEnsure([t.slice(0,7),tm.slice(0,7)]);
 }
 
 /* ================= HÁBITOS (semanas, barras y mapa) ================= */
@@ -1130,6 +1170,7 @@ document.addEventListener("focusout",()=>setTimeout(()=>{if(pending&&!SH){const 
 
 /* ================= acciones ================= */
 const ACT={
+ hyTm:()=>taskSheet(null,{due:addDays(today(),1)}),
  gcConnect:()=>{gcAuth().then(()=>gcLoadCals()).then(()=>{toast("Google Calendar conectado");gcFlushQueue();gcEnsure(gcMonthsNow(),true);render()}).catch(gcFail)},
  gcRefresh:()=>{(gcTokOk()?Promise.resolve():gcAuth()).then(()=>gcLoadCals()).then(()=>{gcFlushQueue();gcEnsure(gcMonthsNow(),true);render()}).catch(gcFail)},
  gcOff:b=>{if(!armed(b))return;gc={cache:{},queue:[],def:{}};gcSave();render();toast("Google Calendar desconectado")},
@@ -1237,6 +1278,7 @@ const ACT={
  }
 };
 const FORMS={
+ hyQ(fd){const title=String(fd.get("title")||"").trim();if(!title){taskSheet(null,{due:today()});return}D.tareas.push({id:uid(),title,notes:"",due:today(),time:"",prio:3,area:"",done:false,created:today()});put("tareas");render();const i=$("#hyQt");if(i)i.focus();toast("Tarea agregada para hoy")},
  tqSF(fd){const title=String(fd.get("title")||"").trim();if(!title)return;D.tareas.push({id:uid(),title,notes:"",due:"",time:"",prio:3,area:"",done:false,created:today()});put("tareas");tPanel="sinfecha";render();const i=$("#tqSFt");if(i)i.focus();toast("Tarea agregada sin fecha")},
  tqForm(fd,f){const title=String(fd.get("title")||"").trim();if(!title){taskSheet();return}const d=fd.get("due");D.tareas.push({id:uid(),title,notes:"",due:d==="hoy"?today():d==="manana"?addDays(today(),1):"",time:"",prio:3,area:"",done:false,created:today()});put("tareas");render();const i=$("#tqTitle");if(i)i.focus();toast("Tarea agregada")},
  gAddExForm(fd){const n=String(fd.get("ex")||"").trim();if(!n)return;const last=lastFor(n);D.gym.activo.ejercicios.push({nombre:n,series:(last||[{reps:10,kg:""},{reps:10,kg:""},{reps:10,kg:""}]).map(s=>({reps:s.reps,kg:s.kg,ok:false}))});put("gym");render();const i=$("#gNewEx");if(i)i.focus()},
