@@ -2719,7 +2719,7 @@ async function gcPush(kind,id,want){
   toast("También quedó en Google Calendar")
  }catch(e){if(e&&e.code==="token")gcQueue({kind,id,want});else gcFail(e)}}
 function gcQueue(q){gc.queue=gc.queue.filter(o=>!(o.kind===q.kind&&o.id===q.id));gc.queue.push(q);gcSave()}
-function gcFlushQueue(){if(gcTokOk()&&D.cfg.cierre&&D.cfg.cierre.pend)cierreSync();if(!gcTokOk()||!gc.queue.length)return;const Q=gc.queue.slice();gc.queue=[];gcSave();
+function gcFlushQueue(){cierreGcLimpiar();if(!gcTokOk()||!gc.queue.length)return;const Q=gc.queue.slice();gc.queue=[];gcSave();
  Q.forEach(q=>{if(q.del)gcApi("calendars/"+encC(q.cal)+"/events/"+encC(q.ev),{method:"DELETE"}).catch(e=>{if(e&&e.code==="token")gcQueue(q)});else gcPush(q.kind,q.id,q.want)})}
 /* Al borrar un elemento de Corcho, borra también su evento. */
 function gcForget(x){if(!x||!x.gcal)return;const q={del:true,cal:x.gcal.cal,ev:x.gcal.id,kind:"del",id:x.gcal.id};
@@ -2763,36 +2763,48 @@ function cierreTxt(e){const a=[];if(e.faltan)a.push("te "+(e.faltan===1?"falta 1
 const cierreActivo=()=>{const c=cierreCfg();if(!c.on)return false;const n=new Date();return pad2(n.getHours())+":"+pad2(n.getMinutes())>=c.hora};
 function cierreCheck(){const c=cierreCfg();if(!c.on||!cierreActivo())return;const t=today();let last=null;try{last=localStorage.getItem(CIERRE_K)}catch(e){}if(last===t)return;
  try{localStorage.setItem(CIERRE_K,t)}catch(e){}const e=cierreEstado();notify("Cierre del día",cierreTxt(e),"cierre-"+t)}
-function cierreBody(){const c=cierreCfg(),tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"America/Argentina/Buenos_Aires";const st=new Date(today()+"T"+c.hora),en=new Date(st.getTime()+10*60e3);
- const url=location.origin+location.pathname.replace(/index\.html$/,"");
- return {summary:"Cierre del día · Corcho",description:"Anotá tus hábitos y los gastos de hoy.\n"+url,start:{dateTime:localISO(st),timeZone:tz},end:{dateTime:localISO(en),timeZone:tz},recurrence:["RRULE:FREQ=DAILY"],reminders:{useDefault:false,overrides:[{method:"popup",minutes:0}]},extendedProperties:{private:{corcho:"cierre"}},transparency:"transparent"}}
-/* Crea, actualiza o borra el evento diario en Google Calendar. */
-async function cierreSync(){const c=cierreCfg();if(!gcOn())return;
- if(!gcTokOk()){c.pend=true;put("cfg");return}
- try{
-  if(!c.on){if(c.gcal){await gcApi("calendars/"+encC(c.gcal.cal)+"/events/"+encC(c.gcal.id),{method:"DELETE"}).catch(e=>{if(e.code!==404&&e.code!==410)throw e});delete c.gcal}c.pend=false;put("cfg");safeRender();return}
-  const body=JSON.stringify(cierreBody());
-  if(c.gcal){try{await gcApi("calendars/"+encC(c.gcal.cal)+"/events/"+encC(c.gcal.id),{method:"PUT",body});c.pend=false;put("cfg");safeRender();toast("Aviso actualizado en Google Calendar: todos los días a las "+c.hora);return}catch(e){if(e.code!==404&&e.code!==410)throw e;delete c.gcal}}
-  const cal=gc.wcal||"primary";const j=await gcApi("calendars/"+encC(cal)+"/events",{method:"POST",body});c.gcal={id:j.id,cal};c.pend=false;put("cfg");safeRender();toast("Listo: Google Calendar te avisa todos los días a las "+c.hora)
- }catch(e){if(e&&e.code==="token"){c.pend=true;put("cfg");safeRender()}else gcFail(e)}}
-/* Desde un toque: pide permiso de Google si hace falta. */
-function cierreSyncTap(){if(!gcOn())return;if(gcTokOk()){cierreSync();return}gcAuth().then(()=>{cierreSync();gcFlushQueue()},e=>{cierreCfg().pend=true;put("cfg");gcFail(e);safeRender()})}
-function cierreCard(){const c=cierreCfg();const canN=canNotify(),perm=canN?Notification.permission:"no";
- let body='<p class="small" style="margin:0 0 12px">Un aviso al final del día para que anotes tus hábitos y los gastos de hoy.</p>';
+/* Al abrir la app: renueva el registro del aviso y borra el evento viejo de Calendar. */
+const cierreRenovar=()=>{try{cierreGcLimpiar();const c=D.cfg.cierre;if(c&&c.on&&pushOk()&&Notification.permission==="granted")pushSetup(false).catch(()=>{})}catch(e){}};setTimeout(cierreRenovar,6000);setTimeout(cierreRenovar,20000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)cierreRenovar()});
+/* ---- Aviso push: lo manda el servidor de avisos (GitHub Actions) aunque la app esté cerrada ---- */
+const VAPID_PUB="BOHmN3CcJ6A1jyqmkL3cv1kU4siwH2T0-qnXVDscjR3U0rMyXt_cXZFfxZbqz9K9Irm6S4RcFp83R-E1NlC0jX8";
+const pushOk=()=>"serviceWorker" in navigator&&"PushManager" in window&&canNotify();
+const devId=()=>{let d=null;try{d=localStorage.getItem("corcho-dev-id");if(!d){d=uid()+uid();localStorage.setItem("corcho-dev-id",d)}}catch(e){d="x"}return d};
+const pushKey=()=>"corcho:push:"+devId();
+const pushSaved=()=>{try{return !!localStorage.getItem(pushKey())}catch(e){return false}};
+function b64u(s){const p="=".repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
+/* Registra este dispositivo para recibir el aviso. ask=true solo desde un toque (puede pedir permiso). */
+async function pushSetup(ask){
+ if(!pushOk())return "nosup";
+ if(Notification.permission!=="granted"){if(!ask||Notification.permission==="denied")return "perm";const p=await Notification.requestPermission();if(p!=="granted")return "perm"}
+ if(!D.cfg.notif){D.cfg.notif=true;put("cfg")}
+ const S=window.CorchoSync;if(!S||!S.user)return "login";
+ const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+ if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)});
+ const j=sub.toJSON(),tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"America/Argentina/Buenos_Aires",k=pushKey();
+ let old=null;try{old=JSON.parse(localStorage.getItem(k)||"null")}catch(e){}
+ if(!old||old.sub.endpoint!==j.endpoint||old.tz!==tz){try{localStorage.setItem(k,JSON.stringify({sub:j,tz,disp:/Android|iPhone|iPad/i.test(navigator.userAgent)?"teléfono":"computadora",ts:Date.now()}))}catch(e){}S.touch(k)}
+ return "ok"}
+/* Antes el aviso se creaba como evento de Google Calendar: si quedó uno, lo borra. */
+function cierreGcLimpiar(){const c=D.cfg.cierre;if(!c||!c.gcal||!gcTokOk())return;const g=c.gcal;
+ gcApi("calendars/"+encC(g.cal)+"/events/"+encC(g.id),{method:"DELETE"}).then(()=>{delete c.gcal;delete c.pend;put("cfg")},e=>{if(e&&(e.code===404||e.code===410)){delete c.gcal;delete c.pend;put("cfg")}})}
+function cierreCard(){const c=cierreCfg();const S=window.CorchoSync;const perm=canNotify()?Notification.permission:"no";
+ let body='<p class="small" style="margin:0 0 12px">Corcho te manda un aviso al final del día para que anotes tus hábitos y los gastos de hoy, aunque la app esté cerrada.</p>';
  body+='<label class="gc-opt"><input type="checkbox" data-cierre="on"'+(c.on?" checked":"")+'><span>Avisarme todos los días</span></label>';
+ let foot="";
  if(c.on){
   body+='<div class="field" style="margin-top:12px"><label for="ci-h">Hora del aviso</label><input type="time" id="ci-h" data-cierre="hora" value="'+esc(c.hora)+'"></div>';
-  let st="";
-  if(gcOn()&&c.gcal&&!c.pend)st='<span class="sync-dot" data-st="ok"></span><span>Te llega por <b>Google Calendar</b> todos los días a las '+esc(c.hora)+", aunque Corcho esté cerrada.</span>";
-  else if(gcOn())st='<span class="sync-dot" data-st="desconectado"></span><span>Falta guardarlo en Google Calendar para que te llegue con la app cerrada.</span>';
-  else st='<span class="sync-dot" data-st="desconectado"></span><span>Sin Google Calendar, el aviso solo aparece si Corcho está abierta. Conectalo arriba para recibirlo siempre.</span>';
-  body+='<div class="sync-row small ci-st">'+st+"</div>";
-  if(canN&&perm!=="granted"&&perm!=="denied")body+='<p class="small muted" style="margin:8px 0 0">Activá las notificaciones de Corcho para ver el aviso también dentro de la app.</p>';
+  let st,ok=false;
+  if(!pushOk())st="Este navegador no recibe avisos con la app cerrada. En iPhone, primero instalá Corcho en la pantalla de inicio.";
+  else if(perm==="denied")st="Bloqueaste las notificaciones de Corcho. Habilitalas en los ajustes del teléfono (Apps › Chrome o Corcho › Notificaciones) y volvé a tildar la casilla.";
+  else if(!S||!S.user)st="Iniciá sesión con Google en <b>Sincronización</b> (acá arriba) para que el aviso te llegue con la app cerrada.";
+  else if(perm!=="granted"||!pushSaved())st="Falta activar los avisos en este dispositivo.";
+  else{ok=true;st="Te llega todos los días a las <b>"+esc(c.hora)+"</b> en este "+(/Android|iPhone|iPad/i.test(navigator.userAgent)?"teléfono":"dispositivo")+", aunque Corcho esté cerrada. Puede demorar unos minutos."}
+  body+='<div class="sync-row small ci-st"><span class="sync-dot" data-st="'+(ok?"ok":"desconectado")+'"></span><span>'+st+"</span></div>";
+  if(!ok&&pushOk()&&perm!=="denied"&&S&&S.user)foot+='<button class="btn primary" data-act="cierrePush">Activar avisos</button>';
+  if(ok)foot+='<button class="btn" data-act="cierreTest">Probar aviso</button>';
  }
- let foot="";
- if(c.on&&gcOn()&&(!c.gcal||c.pend))foot+='<button class="btn primary" data-act="cierreGc">'+GC_IC+" Guardar en Google Calendar</button>";
- if(c.on&&canN&&perm==="default")foot+='<button class="btn" data-act="rPerm">Activar notificaciones</button>';
  return card("ajustes","Cierre del día","",body,foot)}
+function cierreActivar(){pushSetup(true).then(r=>{if(r==="ok")toast("Listo: te aviso todos los días a las "+cierreCfg().hora);else if(r==="perm")toast("Sin permiso para notificaciones no te puedo avisar.");else if(r==="login")toast("Iniciá sesión con Google en Sincronización para recibir el aviso con la app cerrada.");else if(r==="nosup")toast("Este navegador no recibe avisos con la app cerrada.");render()}).catch(e=>{toast("No se pudo activar el aviso: "+(e&&e.message||e));render()})}
 
 /* ================= PAGOS Y VENCIMIENTOS ================= */
 D.pagos=Object.assign({items:[],tarjetas:[],hist:[]},load("pagos",{}));KEY.pagos="pagos";
@@ -3079,7 +3091,8 @@ document.addEventListener("focusout",()=>setTimeout(()=>{if(pending&&!SH){const 
 
 /* ================= acciones ================= */
 const ACT={
- cierreGc:()=>cierreSyncTap(),
+ cierrePush:()=>cierreActivar(),
+ cierreTest:()=>{const e=cierreEstado();notify("Cierre del día",cierreTxt(e),"cierre-prueba")},
  hyTm:()=>taskSheet(null,{due:addDays(today(),1)}),
  gcConnect:()=>{gcAuth().then(()=>gcLoadCals()).then(()=>{toast("Google Calendar conectado");gcFlushQueue();gcEnsure(gcMonthsNow(),true);render()}).catch(gcFail)},
  gcRefresh:()=>{(gcTokOk()?Promise.resolve():gcAuth()).then(()=>gcLoadCals()).then(()=>{gcFlushQueue();gcEnsure(gcMonthsNow(),true);render()}).catch(gcFail)},
@@ -3208,7 +3221,7 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
  const el=e.target;
- if(el.dataset&&el.dataset.cierre){const c=cierreCfg();if(el.dataset.cierre==="on"){c.on=el.checked;put("cfg");if(gcOn()&&(c.on||c.gcal))cierreSyncTap();if(c.on&&canNotify()&&Notification.permission==="granted"&&!D.cfg.notif){D.cfg.notif=true;put("cfg")}if(c.on&&canNotify()&&Notification.permission==="default")Notification.requestPermission().then(p=>{if(p==="granted"){D.cfg.notif=true;put("cfg")}render()}).catch(()=>{});toast(c.on?"Te aviso todos los días a las "+c.hora:"Aviso de cierre desactivado");render()}else if(el.value){c.hora=el.value;put("cfg");try{localStorage.removeItem(CIERRE_K)}catch(x){}if(gcOn()&&c.gcal){if(gcTokOk())cierreSync();else{c.pend=true;put("cfg")}}render();toast("Hora del aviso: "+c.hora)}return}
+ if(el.dataset&&el.dataset.cierre){const c=cierreCfg();if(el.dataset.cierre==="on"){c.on=el.checked;put("cfg");if(c.on)cierreActivar();else{toast("Aviso de cierre desactivado");render()}}else if(el.value){c.hora=el.value;put("cfg");try{localStorage.removeItem(CIERRE_K)}catch(x){}render();toast("Hora del aviso: "+c.hora)}return}
  if(el.dataset&&el.dataset.gccal!=null){const c=(gc.cals||[]).find(x=>x.id===el.dataset.gccal);if(c){c.on=el.checked;gc.cache={};gcSave();gcEnsure(gcMonthsNow(),true);render()}return}
  if(el.id==="gc-w"){gc.wcal=el.value;gcSave();toast("Guardado");return}
  if(el.dataset&&el.dataset.fijo){const it=D.fijos.items.find(x=>x.id===el.dataset.fijo);if(it){const v=el.value;it.monto=v===""?null:Math.max(0,+v||0);put("fijos");renderFijos()}return}

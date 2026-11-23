@@ -1,5 +1,5 @@
 // Corcho App: guarda la app en el teléfono para que abra sin internet
-const CACHE = "corcho-v18";
+const CACHE = "corcho-v19";
 const ARCHIVOS = ["./", "./index.html", "./manifest.webmanifest", "./icon-jc3.svg", "./icon-180-jc3.png", "./icon-192-jc3.png", "./icon-512-jc3.png", "./icon-maskable-512-jc3.png", "./icon-badge-jc3.png", "./firebase-config.js"];
 
 self.addEventListener("install", e => {
@@ -27,11 +27,21 @@ self.addEventListener("fetch", e => {
     );
   }
 });
+// Aviso que llega aunque la app esté cerrada (lo manda el servidor de avisos)
+self.addEventListener("push", e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.registration.showNotification(d.title || "Corcho", {
+    body: d.body || "", icon: "./icon-192-jc3.png", badge: "./icon-badge-jc3.png",
+    tag: d.tag || "corcho", renotify: true, data: { url: d.url || "./" }
+  }));
+});
 // Al tocar una notificación, abre (o trae al frente) la app
 self.addEventListener("notificationclick", e => {
   e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || "./", self.registration.scope).href;
   e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(cs => {
-    for (const c of cs) { if ("focus" in c) return c.focus(); }
-    return self.clients.openWindow("./");
+    for (const c of cs) { if ("focus" in c) { if (url.includes("#") && "navigate" in c) c.navigate(url).catch(() => {}); return c.focus(); } }
+    return self.clients.openWindow(url);
   }));
 });
