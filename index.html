@@ -2338,7 +2338,7 @@ function notifCard(){
  else if(Notification.permission==="granted"&&D.cfg.notif){s="Notificaciones activadas.";b='<button class="btn" data-act="rTest">Probar aviso</button><button class="btn" data-act="rOff">Desactivar</button>'}
  else if(Notification.permission==="denied")s="Bloqueaste las notificaciones para esta app. Podés habilitarlas en los ajustes del navegador o del teléfono.";
  else{s="Activá las notificaciones para recibir recordatorios, fin del temporizador y tareas con hora.";b='<button class="btn mod" data-act="rPerm">Activar notificaciones</button>'}
- return card("recordatorios","Notificaciones","",'<p class="small" style="margin:0">'+s+'</p><p class="small muted" style="margin:8px 0 0">Los avisos llegan con la app abierta o en segundo plano reciente. Si el teléfono la cierra por completo, el aviso aparece al volver a abrirla.</p>',b);
+ return card("recordatorios","Notificaciones","",'<p class="small" style="margin:0">'+s+'</p><p class="small muted" style="margin:8px 0 0">'+(pushSaved()?"Te llegan aunque Corcho esté cerrada: recordatorios, tareas con hora, vencimientos de pagos (a las 9) y el cierre del día. Pueden demorar unos minutos.":"Para recibirlos con la app cerrada, iniciá sesión con Google en Ajustes › Sincronización.")+"</p>",b);
 }
 function renderRecordatorios(){
  const now=D.rec.filter(r=>!r.hecho&&r.avisado).sort((a,b)=>a.at.localeCompare(b.at));
@@ -2363,9 +2363,9 @@ function remSheet(id){
 function checkRem(){
  const now=Date.now();let ch=false,chT=false;
  D.rec.forEach(r=>{if(r.hecho||r.avisado&&r.rep==="no")return;const t=new Date(r.at).getTime();if(!(t<=now))return;
-  if(now-t<12*3600e3)notify(r.titulo,"Recordatorio · "+r.at.slice(11,16),"rem-"+r.id);
+  if(now-t<(pushSaved()?20*60e3:12*3600e3))notify(r.titulo,"Recordatorio · "+r.at.slice(11,16),"rem-"+r.id);
   if(r.rep==="no")r.avisado=true;else r.at=nextOcc(r.at,r.rep);ch=true});
- D.tareas.forEach(x=>{if(x.done||x.avisado||!x.due||!x.time)return;const t=new Date(x.due+"T"+x.time).getTime();if(t<=now){if(now-t<12*3600e3)notify("Tarea: "+x.title,"Programada para las "+x.time,"task-"+x.id);x.avisado=true;chT=true}});
+ D.tareas.forEach(x=>{if(x.done||x.avisado||!x.due||!x.time)return;const t=new Date(x.due+"T"+x.time).getTime();if(t<=now){if(now-t<(pushSaved()?20*60e3:12*3600e3))notify("Tarea: "+x.title,"Programada para las "+x.time,"task-"+x.id);x.avisado=true;chT=true}});
  let chP=false;if(new Date().getHours()>=9){const t=today();D.pagos.avisos=D.pagos.avisos||{};pendientes().forEach(p=>{if(p.fecha>t)return;const key=p.kind+":"+p.id+":"+p.fecha;if(D.pagos.avisos[key])return;D.pagos.avisos[key]=1;chP=true;if(p.fecha===t)notify("Hoy vence: "+p.desc,money(p.monto),"pago-"+p.id)})}
  if(chP)put("pagos");
  if(ch)put("rec");if(chT)put("tareas");if(ch||chT||chP)safeRender();
@@ -2702,9 +2702,9 @@ function gcBody(kind,x){
  const b={extendedProperties:{private:{corcho:kind}}};
  const timed=(s,min)=>{const e=new Date(s.getTime()+min*60e3);b.start={dateTime:localISO(s),timeZone:tz};b.end={dateTime:localISO(e),timeZone:tz}};
  const allDay=d=>{b.start={date:d};b.end={date:addDays(d,1)}};
- if(kind==="tarea"){if(!x.due)return null;b.summary=(x.done?"✓ ":"")+x.title;b.description=(x.notes?x.notes+"\n\n":"")+"Tarea de Corcho App";if(x.time)timed(new Date(x.due+"T"+x.time),30);else allDay(x.due);b.reminders={useDefault:!!x.time}}
- else if(kind==="rec"){b.summary=x.titulo;b.description="Recordatorio de Corcho App";timed(new Date(x.at),15);b.reminders={useDefault:false,overrides:[{method:"popup",minutes:0}]};const R={diario:"DAILY",semanal:"WEEKLY",mensual:"MONTHLY"}[x.rep];if(R)b.recurrence=["RRULE:FREQ="+R]}
- else if(kind==="pago"){if(x.pagado||!x.fecha)return null;b.summary="Vence: "+x.desc+((+x.monto||0)>0?" · "+money(x.monto):"");b.description="Pago de Corcho App"+(x.forma==="mensual"?" (todos los meses)":"");allDay(x.fecha);b.reminders={useDefault:false,overrides:[{method:"popup",minutes:15*60}]}}
+ if(kind==="tarea"){if(!x.due)return null;b.summary=(x.done?"✓ ":"")+x.title;b.description=(x.notes?x.notes+"\n\n":"")+"Tarea de Corcho App";if(x.time)timed(new Date(x.due+"T"+x.time),30);else allDay(x.due);b.reminders={useDefault:false,overrides:[]}}
+ else if(kind==="rec"){b.summary=x.titulo;b.description="Recordatorio de Corcho App";timed(new Date(x.at),15);b.reminders={useDefault:false,overrides:[]};const R={diario:"DAILY",semanal:"WEEKLY",mensual:"MONTHLY"}[x.rep];if(R)b.recurrence=["RRULE:FREQ="+R]}
+ else if(kind==="pago"){if(x.pagado||!x.fecha)return null;b.summary="Vence: "+x.desc+((+x.monto||0)>0?" · "+money(x.monto):"");b.description="Pago de Corcho App"+(x.forma==="mensual"?" (todos los meses)":"");allDay(x.fecha);b.reminders={useDefault:false,overrides:[]}}
  return b}
 /* want=true: crear o actualizar el evento. want=false: borrarlo. */
 async function gcPush(kind,id,want){
@@ -2719,7 +2719,12 @@ async function gcPush(kind,id,want){
   toast("También quedó en Google Calendar")
  }catch(e){if(e&&e.code==="token")gcQueue({kind,id,want});else gcFail(e)}}
 function gcQueue(q){gc.queue=gc.queue.filter(o=>!(o.kind===q.kind&&o.id===q.id));gc.queue.push(q);gcSave()}
-function gcFlushQueue(){cierreGcLimpiar();if(!gcTokOk()||!gc.queue.length)return;const Q=gc.queue.slice();gc.queue=[];gcSave();
+/* Saca las alertas de Google Calendar de los eventos que Corcho ya había creado (los avisos ahora los manda Corcho). */
+let gcSinAvBusy=false;
+function gcSinAvisos(){if(gc.sinAvisos===2||gcSinAvBusy||!gcTokOk())return;gcSinAvBusy=true;
+ const L=[];["tarea","rec","pago"].forEach(k=>GC_KIND[k].list().forEach(x=>{if(x.gcal)L.push(x.gcal)}));
+ Promise.all(L.map(g=>gcApi("calendars/"+encC(g.cal)+"/events/"+encC(g.id),{method:"PATCH",body:JSON.stringify({reminders:{useDefault:false,overrides:[]}})}).catch(e=>{if(e&&e.code==="token")throw e}))).then(()=>{gc.sinAvisos=2;gcSave()},()=>{}).then(()=>{gcSinAvBusy=false})}
+function gcFlushQueue(){cierreGcLimpiar();gcSinAvisos();if(!gcTokOk()||!gc.queue.length)return;const Q=gc.queue.slice();gc.queue=[];gcSave();
  Q.forEach(q=>{if(q.del)gcApi("calendars/"+encC(q.cal)+"/events/"+encC(q.ev),{method:"DELETE"}).catch(e=>{if(e&&e.code==="token")gcQueue(q)});else gcPush(q.kind,q.id,q.want)})}
 /* Al borrar un elemento de Corcho, borra también su evento. */
 function gcForget(x){if(!x||!x.gcal)return;const q={del:true,cal:x.gcal.cal,ev:x.gcal.id,kind:"del",id:x.gcal.id};
@@ -2764,7 +2769,7 @@ const cierreActivo=()=>{const c=cierreCfg();if(!c.on)return false;const n=new Da
 function cierreCheck(){const c=cierreCfg();if(!c.on||!cierreActivo())return;const t=today();let last=null;try{last=localStorage.getItem(CIERRE_K)}catch(e){}if(last===t)return;
  try{localStorage.setItem(CIERRE_K,t)}catch(e){}const e=cierreEstado();notify("Cierre del día",cierreTxt(e),"cierre-"+t)}
 /* Al abrir la app: renueva el registro del aviso y borra el evento viejo de Calendar. */
-const cierreRenovar=()=>{try{cierreGcLimpiar();const c=D.cfg.cierre;if(c&&c.on&&pushOk()&&Notification.permission==="granted")pushSetup(false).catch(()=>{})}catch(e){}};setTimeout(cierreRenovar,6000);setTimeout(cierreRenovar,20000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)cierreRenovar()});
+const cierreRenovar=()=>{try{cierreGcLimpiar();gcSinAvisos();if(pushOk()&&Notification.permission==="granted"&&D.cfg.notif!==false)pushSetup(false).catch(()=>{})}catch(e){}};setTimeout(cierreRenovar,6000);setTimeout(cierreRenovar,20000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)cierreRenovar()});
 /* ---- Aviso push: lo manda el servidor de avisos (GitHub Actions) aunque la app esté cerrada ---- */
 const VAPID_PUB="BOHmN3CcJ6A1jyqmkL3cv1kU4siwH2T0-qnXVDscjR3U0rMyXt_cXZFfxZbqz9K9Irm6S4RcFp83R-E1NlC0jX8";
 const pushOk=()=>"serviceWorker" in navigator&&"PushManager" in window&&canNotify();
@@ -3172,7 +3177,7 @@ const ACT={
  rNew:()=>remSheet(),
  rEdit:b=>remSheet(b.dataset.id),
  rDone:b=>{const r=D.rec.find(x=>x.id===b.dataset.id);if(!r)return;r.hecho=!r.hecho;if(!r.hecho&&new Date(r.at).getTime()>Date.now())r.avisado=false;put("rec");render()},
- rPerm:()=>{if(!canNotify())return;try{Notification.requestPermission().then(p=>{if(p==="granted"){D.cfg.notif=true;put("cfg");toast("Notificaciones activadas")}else toast("No se activaron. Si estás en iPhone, primero instalá la app en la pantalla de inicio.");render()}).catch(()=>{toast("Este navegador no permite notificaciones acá.");render()})}catch(e){toast("Este navegador no permite notificaciones acá.")}},
+ rPerm:()=>{if(!canNotify())return;try{Notification.requestPermission().then(p=>{if(p==="granted"){D.cfg.notif=true;put("cfg");toast("Notificaciones activadas");pushSetup(false).then(()=>render()).catch(()=>{})}else toast("No se activaron. Si estás en iPhone, primero instalá la app en la pantalla de inicio.");render()}).catch(()=>{toast("Este navegador no permite notificaciones acá.");render()})}catch(e){toast("Este navegador no permite notificaciones acá.")}},
  rOff:()=>{D.cfg.notif=false;put("cfg");render()},
  rTest:()=>notify("Así se ve un aviso de Corcho","Todo listo","test"),
  aTema:b=>{D.cfg.tema=b.dataset.v;put("cfg");applyTheme();render()},
